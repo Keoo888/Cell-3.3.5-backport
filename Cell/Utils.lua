@@ -1527,9 +1527,43 @@ function F.IsFriend(unitFlags)
     return (bit.band(unitFlags, OBJECT_AFFILIATION_MINE) ~= 0) or (bit.band(unitFlags, OBJECT_AFFILIATION_RAID) ~= 0) or (bit.band(unitFlags, OBJECT_AFFILIATION_PARTY) ~= 0)
 end
 
+--! WotLK fix: these helpers matched retail string GUIDs ("Player-1-...",
+--! "Pet-...", "Creature-..."), but 3.3.5 GUIDs are hex strings like
+--! "0x0000000000012345". Every check silently returned nil, so callers
+--! (ShouldShowPowerBar, ShouldShowPowerText, etc.) could never classify a
+--! unit - e.g. power bar filters were ignored for every group member.
+--! On 3.3.5 the unit type lives in hex digits 3-5 of the GUID:
+--! 0x000 = player; otherwise the low nibble is 3 = NPC, 4 = pet,
+--! 5 = vehicle. Retail-style prefixes are kept as a fallback for servers
+--! with custom GUID formats.
+local band = bit.band
+local function GetGUIDType(guid)
+    -- returns "player" | "npc" | "pet" | "vehicle" | nil
+    if strfind(guid, "^0x") then
+        local high = tonumber(strsub(guid, 3, 5), 16)
+        if not high then return end
+        local masked = band(high, 0x00F)
+        if masked == 0 or masked == 1 then
+            return "player"
+        elseif masked == 3 then
+            return "npc"
+        elseif masked == 4 then
+            return "pet"
+        elseif masked == 5 then
+            return "vehicle"
+        end
+        return
+    end
+    -- retail-style fallback
+    if strfind(guid, "^Player") then return "player" end
+    if strfind(guid, "^Pet") then return "pet" end
+    if strfind(guid, "^Vehicle") then return "vehicle" end
+    if strfind(guid, "^Creature") then return "npc" end
+end
+
 function F.IsPlayer(guid)
     if guid then
-        return string.find(guid, "^Player")
+        return GetGUIDType(guid) == "player"
     end
 end
 
@@ -1538,19 +1572,19 @@ function F.IsPet(guid, unit)
         return strfind(unit, "pet%d*$")
     end
     if guid then
-        return string.find(guid, "^Pet")
+        return GetGUIDType(guid) == "pet"
     end
 end
 
 function F.IsNPC(guid)
     if guid then
-        return string.find(guid, "^Creature")
+        return GetGUIDType(guid) == "npc"
     end
 end
 
 function F.IsVehicle(guid)
     if guid then
-        return string.find(guid, "^Vehicle")
+        return GetGUIDType(guid) == "vehicle"
     end
 end
 
@@ -2089,7 +2123,8 @@ else
     function F.FindDebuffByIds(unit, spellIds)
         local debuffs = {}
         for i = 1, 40 do
-            local name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId = Cell.UnitDebuff(unit, i)
+            --! WotLK perf: native UnitDebuff (rank at position 2, spellId at 11)
+            local name, _, _, _, debuffType, _, _, _, _, _, spellId = UnitDebuff(unit, i)
             if not name then
                 break
             end
@@ -2104,13 +2139,16 @@ else
     function F.FindAuraByDebuffTypes(unit, types)
         local debuffs = {}
         for i = 1, 40 do
-            local name, icon, count, debuffType, duration, expirationTime, source, isStealable, nameplateShowPersonal, spellId = Cell.UnitDebuff(unit, i)
+            --! WotLK perf: native UnitDebuff (rank at position 2, spellId at 11)
+            local name, _, _, _, debuffType, _, _, _, _, _, spellId = UnitDebuff(unit, i)
             if not name then
                 break
             end
 
             if types == "all" or types[debuffType] then
-                debuffs[spellId] = I.CheckDebuffType(s, spellId)
+                --! WotLK fix: was CheckDebuffType(s, spellId) with undefined
+                --! global `s` (always nil) - pass the actual debuffType
+                debuffs[spellId] = I.CheckDebuffType(debuffType, spellId)
             end
         end
         return debuffs

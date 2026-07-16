@@ -255,15 +255,21 @@ do
 
         -- Wrap Texture:SetAtlas to handle missing atlases in WotLK 3.3.5
         -- WotLK has fewer atlases than retail, so we need to gracefully handle missing ones
+        --! NOTE: this wrapper lands on the SHARED Texture metatable, so it
+        --! affects EVERY addon's textures (it only exists when another addon,
+        --! e.g. an ElvUI backport, already defined SetAtlas).
         if mt.__index.SetAtlas and not mt.__index._CellSetAtlasWrapped then
             local originalSetAtlas = mt.__index.SetAtlas
             function mt.__index:SetAtlas(atlasName, useAtlasSize, filterMode)
                 -- Try to call the original SetAtlas
                 local success = pcall(originalSetAtlas, self, atlasName, useAtlasSize, filterMode)
                 if not success then
-                    -- Atlas doesn't exist in WotLK, use a fallback
-                    -- Set to a blank/transparent texture to avoid errors
-                    self:SetTexture(nil)
+                    --! WotLK fix: was SetTexture(nil), but on 3.3.5 that
+                    --! renders an OPAQUE WHITE rectangle instead of clearing
+                    --! (broke other addons' textures, e.g. the ElvUI castbar
+                    --! spark showed as a white block whenever Cell was
+                    --! enabled). Use a fully transparent solid color instead.
+                    self:SetTexture(0, 0, 0, 0)
                 end
             end
             mt.__index._CellSetAtlasWrapped = true
@@ -302,6 +308,40 @@ end
 
 
 
+
+-- SetShown polyfill for WotLK (method added in 5.0.4; missing on 3.3.5).
+-- Pure additive polyfill on the shared widget metatables: only installed
+-- when the method does not exist, never overwrites anything (safe for
+-- other addons, same pattern as IsTruncated below).
+-- Covers Frame, Texture and FontString - the three region types Cell
+-- calls :SetShown() on (Base.lua stack/duration, UnitButton gapTexture).
+do
+    local function InstallSetShown(object)
+        local mt = getmetatable(object)
+        if mt and mt.__index and not mt.__index.SetShown then
+            function mt.__index:SetShown(show)
+                if show then
+                    self:Show()
+                else
+                    self:Hide()
+                end
+            end
+        end
+    end
+
+    local probeFrame = CreateFrame("Frame")
+    InstallSetShown(probeFrame)              -- Frame (+ Button/StatusBar etc. if shared)
+    InstallSetShown(probeFrame:CreateTexture())     -- Texture
+    InstallSetShown(probeFrame:CreateFontString())  -- FontString
+    -- widget types with distinct metatables on 3.3.5
+    InstallSetShown(CreateFrame("Button"))
+    InstallSetShown(CreateFrame("StatusBar"))
+    InstallSetShown(CreateFrame("Cooldown"))
+    InstallSetShown(CreateFrame("EditBox"))
+    InstallSetShown(CreateFrame("Slider"))
+    InstallSetShown(CreateFrame("CheckButton"))
+    InstallSetShown(CreateFrame("ScrollFrame"))
+end
 
 -- FontString IsTruncated polyfill for WotLK
 do
@@ -498,13 +538,27 @@ do
         local origSetStatusBarTexture = mt.__index.SetStatusBarTexture
 
         -- Wrap SetStatusBarTexture to cache the texture path
+        --! NOTE: this wrapper lands on the SHARED StatusBar metatable and
+        --! affects EVERY addon's bars. It must never touch textures it did
+        --! not create itself.
         if origSetStatusBarTexture then
             function mt.__index:SetStatusBarTexture(texture, layer, sublayer)
                 if type(texture) == "string" then
                     self._cellCachedTexturePath = texture
-                    -- keep our fallback texture in sync instead of dropping it
+                    --! WotLK fix: only sync the fallback if WE created it.
+                    --! A texture found by the region scan can be a foreign
+                    --! region (e.g. the ElvUI aurabar SPARK, created via
+                    --! statusBar:CreateTexture) - overwriting it with the
+                    --! flat bar texture rendered the spark as a solid white
+                    --! rectangle. Scanned caches are dropped instead: the
+                    --! native SetStatusBarTexture recreates the internal
+                    --! texture, so the next Get can re-resolve it properly.
                     if self._cellStatusBarTexture then
-                        self._cellStatusBarTexture:SetTexture(texture)
+                        if self._cellStatusBarTextureCreated then
+                            self._cellStatusBarTexture:SetTexture(texture)
+                        else
+                            self._cellStatusBarTexture = nil
+                        end
                     end
                 end
                 return origSetStatusBarTexture(self, texture, layer, sublayer)
@@ -532,11 +586,19 @@ do
                     return self._cellStatusBarTexture
                 end
 
-                -- scan regions for the bar's internal texture
+                --! WotLK fix: scan is restricted to ARTWORK-layer textures
+                --! (the statusbar's internal fill lives there) that match
+                --! the cached path when one is known. The old "first texture
+                --! wins" scan could capture foreign regions like the ElvUI
+                --! aurabar spark (OVERLAY) - see SetStatusBarTexture note.
                 for i = 1, select("#", self:GetRegions()) do
                     local region = select(i, self:GetRegions())
-                    if region and region.IsObjectType and region:IsObjectType("Texture") then
+                    if region and region.IsObjectType and region:IsObjectType("Texture")
+                        and region.GetDrawLayer and region:GetDrawLayer() == "ARTWORK"
+                        and (not self._cellCachedTexturePath or region:GetTexture() == self._cellCachedTexturePath)
+                    then
                         self._cellStatusBarTexture = region
+                        self._cellStatusBarTextureCreated = nil
                         return region
                     end
                 end
@@ -549,6 +611,7 @@ do
                 end
                 origSetStatusBarTexture(self, tex)
                 self._cellStatusBarTexture = tex
+                self._cellStatusBarTextureCreated = true
                 return tex
             end
         end
@@ -672,18 +735,32 @@ if not UnitInPhase then
 end
 
 -- UnitGroupRolesAssigned
-if not UnitGroupRolesAssigned then
+do
     -- RETAIL CONTRACT: returns ONE string - "TANK" / "HEALER" / "DAMAGER" / "NONE".
     -- Every consumer (UnitButton, SpotlightFrame, LibGroupInfo) relies on this.
-    -- Do NOT change this back to the 3.3.5 three-boolean convention: mixing the
-    -- two contracts silently breaks role comparisons like (role == "TANK").
+    --
+    --! WotLK fix: 3.3.5a HAS a native UnitGroupRolesAssigned (added with the
+    --! Dungeon Finder, 0x0060C810), but with the OLD contract - it returns
+    --! THREE BOOLEANS (isTank, isHealer, isDamage). The previous
+    --! `if not UnitGroupRolesAssigned` guard meant this wrapper never
+    --! installed on a real 3.3.5 client, so callers received a boolean in
+    --! states.role: LFD tanks got `true` (matches no string key), everyone
+    --! else got `false` -> GetRole fell back to "DAMAGER". Symptom: the DPS
+    --! power filter applied to everybody, TANK/HEALER filters never matched.
+    --! Now defined UNCONDITIONALLY: the native three-boolean result is
+    --! converted to the retail single-string contract, then the fallback
+    --! chain below runs when the native API knows nothing (non-LFD groups).
     --
     -- Sources, in priority order:
-    --   1. GetRaidRosterInfo role (LFG / raid assignments)
-    --   2. Party MAINTANK / MAINASSIST assignments
-    --   3. LibGroupInfo talent-based specRole ONLY (never assignedRole - that
+    --   1. Native 3.3.5 LFD role (converted from three booleans; also
+    --      passes through retail-style strings on custom cores)
+    --   2. GetRaidRosterInfo role (LFG / raid assignments)
+    --   3. Party MAINTANK / MAINASSIST assignments
+    --   4. LibGroupInfo talent-based specRole ONLY (never assignedRole - that
     --      field is written FROM this function, reading it back would create
     --      a circular dependency)
+
+    local orig_UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
     -- Debug flag for role detection (toggle with /cell debug role)
     local roleDebugEnabled = false
@@ -694,8 +771,46 @@ if not UnitGroupRolesAssigned then
         local result = nil
         local roleSource = "none"
 
+        -- Native 3.3.5 LFD roles (three booleans), or a retail-style string
+        -- on custom cores that already backported the new contract
+        if orig_UnitGroupRolesAssigned then
+            local r1, r2, r3 = orig_UnitGroupRolesAssigned(unit)
+            if type(r1) == "string" then
+                if r1 == "TANK" or r1 == "HEALER" or r1 == "DAMAGER" then
+                    result = r1
+                    roleSource = "native (string contract)"
+                end
+                -- "NONE" or anything else: fall through to the chain below
+            elseif r1 then
+                result = "TANK"
+                roleSource = "native LFD (boolean contract)"
+            elseif r2 then
+                result = "HEALER"
+                roleSource = "native LFD (boolean contract)"
+            elseif r3 then
+                result = "DAMAGER"
+                roleSource = "native LFD (boolean contract)"
+            end
+        end
+
+        --! WotLK fix (chat spam regression): the fallback chain below may
+        --! only run for PLAYER units in OUR group. GetPartyAssignment is
+        --! server-validated on some cores - calling it for pets / NPCs
+        --! ("pet", "raidpetN", "bossN") spams the ERR_NOT_IN_YOUR_PARTY
+        --! system message ("X is not in your party.") twice per button on
+        --! every roster update / relog. Pets and NPCs can't have roles:
+        --! return "NONE" immediately (retail contract does the same).
+        if not result then
+            if not UnitIsPlayer(unit) then
+                return "NONE"
+            end
+            if not (UnitIsUnit(unit, "player") or UnitInParty(unit) or UnitInRaid(unit)) then
+                return "NONE"
+            end
+        end
+
         -- For raid members, get role from GetRaidRosterInfo
-        if UnitInRaid(unit) then
+        if not result and UnitInRaid(unit) then
             for i = 1, GetNumRaidMembers() do
                 -- GetRaidRosterInfo returns: name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML, combatRole
                 local name, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(i)
@@ -779,11 +894,88 @@ if not UnitGroupRolesAssigned then
 end
 
 -- UnitClassBase
-if not UnitClassBase then
-    -- Retail API: returns the class filename (e.g. "WARRIOR")
-    -- WotLK: UnitClass returns (localizedName, fileName, classIndex)
+-- Retail API: returns the class filename - ALWAYS UPPERCASE (e.g. "HUNTER").
+-- WotLK: UnitClass returns (localizedName, fileName, classIndex).
+--! Defined unconditionally with full normalization: on some 3.3.5 servers /
+--! with some addons the second UnitClass return (or a pre-existing
+--! UnitClassBase global) yields mixed case ("Hunter") or even the display
+--! name with spaces ("Death Knight" -> upper -> "DEATH KNIGHT"). Cell stores
+--! it in states.class and uses it as a table key (powerFilters["HUNTER"],
+--! RAID_CLASS_COLORS, click-casting spell lists) - any non-canonical value
+--! silently misses every lookup or hard-errors on nested indexing
+--! (powerFilters["DEATH KNIGHT"][role] -> "attempt to index a nil value").
+--! Normalization: uppercase + strip spaces, validate against the canonical
+--! token set, and as a last resort reverse-map the localized class name
+--! (LOCALIZED_CLASS_NAMES_MALE/FEMALE - handles ruRU and other locales).
+do
+    local orig_UnitClassBase = UnitClassBase
+
+    local VALID_TOKENS = {
+        WARRIOR = true, PALADIN = true, HUNTER = true, ROGUE = true,
+        PRIEST = true, DEATHKNIGHT = true, SHAMAN = true, MAGE = true,
+        WARLOCK = true, DRUID = true,
+    }
+
+    -- lazy-built reverse map: localized class name -> canonical token
+    local localizedToToken
+    local function BuildLocalizedMap()
+        localizedToToken = {}
+        for _, source in pairs({LOCALIZED_CLASS_NAMES_MALE, LOCALIZED_CLASS_NAMES_FEMALE}) do
+            if type(source) == "table" then
+                for token, localizedName in pairs(source) do
+                    if type(localizedName) == "string" and VALID_TOKENS[token] then
+                        localizedToToken[string.upper(localizedName)] = token
+                    end
+                end
+            end
+        end
+    end
+
+    local function NormalizeClassToken(class, localizedName)
+        --! perf fast-path: on 3.3.5 UnitClass() already returns a valid
+        --! uppercase token ("MAGE", "DEATHKNIGHT") for virtually every call,
+        --! so skip the upper/gsub allocations entirely (this runs on every
+        --! unit button update - see SESSION_NOTES perf audit)
+        if VALID_TOKENS[class] then
+            return class
+        end
+        if type(class) == "string" then
+            -- uppercase + strip spaces: "Death Knight"/"DEATH KNIGHT" -> "DEATHKNIGHT"
+            local token = string.gsub(string.upper(class), "%s+", "")
+            if VALID_TOKENS[token] then
+                return token
+            end
+            -- non-English value (e.g. ruRU display name): try the reverse map
+            if not localizedToToken then BuildLocalizedMap() end
+            local mapped = localizedToToken[string.upper(class)]
+            if mapped then
+                return mapped
+            end
+        end
+        -- last resort: reverse-map the localized first return of UnitClass
+        if type(localizedName) == "string" then
+            if not localizedToToken then BuildLocalizedMap() end
+            local mapped = localizedToToken[string.upper(localizedName)]
+            if mapped then
+                return mapped
+            end
+        end
+        -- give back *something* uppercase rather than a guaranteed-miss value
+        if type(class) == "string" then
+            return (string.gsub(string.upper(class), "%s+", ""))
+        end
+        return class
+    end
+
     function UnitClassBase(unit)
-        return select(2, UnitClass(unit))
+        local localizedName, class
+        if orig_UnitClassBase then
+            class = orig_UnitClassBase(unit)
+            localizedName = UnitClass(unit)
+        else
+            localizedName, class = UnitClass(unit)
+        end
+        return NormalizeClassToken(class, localizedName)
     end
 end
 
@@ -1447,16 +1639,31 @@ if not C_Spell.IsSpellInRange then
         -- Retail uses spellID directly; 3.3.5 IsSpellInRange wants name
         local name = GetSpellInfo(spellId)
         if not name then return nil end
-        return IsSpellInRange(name, unit)
+        --! WotLK fix: retail contract returns a BOOLEAN, native 3.3.5
+        --! returns 1/0/nil. 0 (out of range) is truthy in Lua - callers
+        --! using the result as a boolean (Utils.lua UnitInSpellRange, the
+        --! range-check fade) treated out-of-range units as in-range.
+        local result = IsSpellInRange(name, unit)
+        if result == nil then return nil end
+        return result == 1
     end
 end
 
 if not C_Spell.GetSpellCooldown then
     function C_Spell.GetSpellCooldown(spellId)
-        -- Old API: start, duration, enabled
-        -- Retail C_Spell: start, duration, enabled, modRate
+        --! WotLK fix: retail C_Spell.GetSpellCooldown returns a TABLE
+        --! (SpellCooldownInfo: startTime, duration, isEnabled, modRate),
+        --! not a tuple. Utils.lua F.GetSpellCooldown takes the C_Spell
+        --! branch and does `info.startTime` - with the old tuple return
+        --! that indexed a number and hard-errored (broke F.IsSpellReady).
         local start, duration, enabled = GetSpellCooldown(spellId)
-        return start, duration, enabled, 1
+        if start == nil then return nil end
+        return {
+            startTime = start,
+            duration  = duration,
+            isEnabled = enabled,
+            modRate   = 1,
+        }
     end
 end
 
@@ -1477,7 +1684,13 @@ end
 if not C_Item then
     C_Item = {}
     function C_Item.IsItemInRange(itemId, unit)
-        return IsItemInRange(itemId, unit)
+        --! WotLK fix: retail contract returns a BOOLEAN, native 3.3.5
+        --! returns 1/0/nil - and 0 (out of range) is truthy in Lua, so
+        --! boolean callers (Utils.lua hostile range check) treated
+        --! out-of-range units as in-range.
+        local result = IsItemInRange(itemId, unit)
+        if result == nil then return nil end
+        return result == 1
     end
     function C_Item.IsUsableItem(itemId)
         return IsUsableItem(itemId)
@@ -1896,13 +2109,35 @@ end
 
 
 -- Wrath: alias RegisterAttributeDriver/UnregisterAttributeDriver to StateDriver versions
+--! WotLK fix: contracts differ by a prefix. In 4.0+,
+--! RegisterAttributeDriver(frame, attribute, cond) takes the FULL attribute
+--! name ("state-visibility"), while 3.3.5 RegisterStateDriver(frame, state,
+--! cond) PREPENDS "state-" itself. The old passthrough turned
+--! "state-visibility" into attribute "state-state-visibility", which the
+--! 3.3.5 SecureStateDriverManager has no special handling for - the pet
+--! frame visibility driver silently did nothing. Strip the "state-" prefix
+--! before delegating.
 if not RegisterAttributeDriver and RegisterStateDriver then
-    function RegisterAttributeDriver(frame, attribute, state)
-        return RegisterStateDriver(frame, attribute, state)
+    local function ToStateName(attribute)
+        if type(attribute) == "string" then
+            local stripped = string.match(attribute, "^state%-(.+)$")
+            if stripped then
+                return stripped
+            end
+        end
+        return attribute
     end
-end
 
-if not UnregisterAttributeDriver and UnregisterStateDriver then
+    function RegisterAttributeDriver(frame, attribute, state)
+        return RegisterStateDriver(frame, ToStateName(attribute), state)
+    end
+
+    if not UnregisterAttributeDriver and UnregisterStateDriver then
+        function UnregisterAttributeDriver(frame, attribute)
+            return UnregisterStateDriver(frame, ToStateName(attribute))
+        end
+    end
+elseif not UnregisterAttributeDriver and UnregisterStateDriver then
     function UnregisterAttributeDriver(frame, attribute)
         return UnregisterStateDriver(frame, attribute)
     end
@@ -1999,22 +2234,41 @@ if not Enum.UIMapType then
 end
 
 -- UnitIsGroupLeader (doesn't exist in WotLK 3.3.5a)
+--! WotLK fix: the old implementation returned false for every raid member
+--! except the player ("can't directly check in WotLK") - leader/assistant
+--! icons never showed on other units' frames. In fact 3.3.5 exposes this
+--! via GetRaidRosterInfo: rank 2 = leader, rank 1 = assistant. UnitInRaid
+--! returns the 0-based raid index in 3.3.5, so GetRaidRosterInfo takes
+--! index+1.
+local function GetUnitRaidRank(unit)
+    local raidIndex = UnitInRaid(unit)
+    if raidIndex then
+        local _, rank = GetRaidRosterInfo(raidIndex + 1)
+        return rank
+    end
+    return nil
+end
+
 if not UnitIsGroupLeader then
     function UnitIsGroupLeader(unit)
-        -- In WotLK, we need to check differently for party vs raid
         if UnitInRaid(unit) then
-            -- In raid, check if unit is the raid leader
-            if UnitIsUnit(unit, "player") then
-                return IsRaidLeader()
-            else
-                -- For other units in raid, we can't directly check in WotLK
-                -- This is a limitation of the WotLK API
-                return false
-            end
-        else
-            -- In party, check if unit is the party leader
-            return UnitIsPartyLeader(unit)
+            local rank = GetUnitRaidRank(unit)
+            return rank == 2
         end
+        --! WotLK fix: do NOT call UnitIsPartyLeader(unit) here - on some
+        --! cores it is server-validated and spams the ERR_NOT_IN_YOUR_PARTY
+        --! system message ("raidpetN is not in your party.") for every
+        --! non-party unit (pets!) on each roster update. Use purely
+        --! client-side checks instead: IsPartyLeader() for the player,
+        --! GetPartyLeaderIndex() + UnitIsUnit for party members.
+        if UnitIsUnit(unit, "player") then
+            return IsPartyLeader() and true or false
+        end
+        local leaderIndex = GetPartyLeaderIndex and GetPartyLeaderIndex()
+        if leaderIndex and leaderIndex > 0 then
+            return UnitIsUnit(unit, "party" .. leaderIndex) and true or false
+        end
+        return false
     end
 end
 
@@ -2023,13 +2277,8 @@ if not UnitIsGroupAssistant then
     function UnitIsGroupAssistant(unit)
         -- Only applies to raids in WotLK
         if UnitInRaid(unit) then
-            if UnitIsUnit(unit, "player") then
-                return IsRaidOfficer()
-            else
-                -- For other units in raid, we can't directly check in WotLK
-                -- This is a limitation of the WotLK API
-                return false
-            end
+            local rank = GetUnitRaidRank(unit)
+            return rank == 1
         end
         return false
     end
@@ -2088,7 +2337,9 @@ if not GetNumGroupMembers then
         elseif GetNumPartyMembers() > 0 then
             return GetNumPartyMembers() + 1 -- +1 for player
         else
-            return 1 -- Just player (solo)
+            --! Retail contract: 0 when not in a group (was 1, which would
+            --! break any `GetNumGroupMembers() == 0` solo check)
+            return 0
         end
     end
 end
@@ -2216,16 +2467,30 @@ do
 end
 
 -------------------------------------------------
--- UnitGetIncomingHeals + UNIT_HEAL_PREDICTION via LibHealComm-4.0
--- (modeled after !!!ClassicAPI HealPrediction.lua and CRF_HealEx)
--- 3.3.5 has neither the API nor the event; LibHealComm provides both the
--- data (comm-based) and callbacks we translate into a synthetic
--- UNIT_HEAL_PREDICTION event for frames that registered it.
--- NOTE: Polyfills.lua loads BEFORE Libs, so LibHealComm is fetched lazily.
+-- Heal prediction: FIX ClassicAPI's broken LibHealComm-4.0 bridge
+--
+-- !!! ClassicAPI loads BEFORE this file (Cell.toc line 15 vs 17) and already
+-- defines UnitGetIncomingHeals + the UNIT_HEAL_PREDICTION EventHandler event,
+-- so any "if not UnitGetIncomingHeals" polyfill here is dead code. Its
+-- implementation (Libs/ClassicAPI/Util/HealPrediction.lua) is broken:
+--   1) UnitGetIncomingHeals only counts the PLAYER's CASTED_HEALS
+--      (other healers and all HoTs are invisible -> wrong/varying amounts)
+--   2) the event only fires when the player is the caster
+--      (heals from others repaint only on a coincidental UNIT_HEALTH
+--       -> the "random" delay)
+--   3) HealComm_ModifierChanged is defined but never registered
+--
+-- Fix (reference: ElvUI 3.3.5 oUF_HealComm4 - direct lib consumption, no
+-- extra layers): override the API function and register full HealComm
+-- callbacks that dispatch through ClassicAPI's own Private.EventHandler -
+-- the exact pipeline Cell buttons already receive events from (WidgetAPI
+-- posthooks frame:RegisterEvent into EventHandler.RegisterEvent).
 -------------------------------------------------
-if not UnitGetIncomingHeals then
-    local HEAL_WINDOW = 5 -- seconds ahead, same as ClassicAPI
+do
+    local _, Private = ...
+    local EventHandler = Private and Private.EventHandler
 
+    -- Libs load before this file, but keep the lookup lazy and safe
     local HealComm
     local function GetHealComm()
         if HealComm == nil then
@@ -2234,44 +2499,9 @@ if not UnitGetIncomingHeals then
         return HealComm or nil
     end
 
-    -- GUID -> unit token map, rebuilt lazily and invalidated on roster changes
-    local guidToUnit = {}
-    local guidMapDirty = true
-
-    local function AddUnit(unit)
-        if UnitExists(unit) then
-            local guid = UnitGUID(unit)
-            if guid then
-                guidToUnit[guid] = unit
-            end
-        end
-    end
-
-    local function RebuildGuidMap()
-        wipe(guidToUnit)
-        AddUnit("player")
-        AddUnit("pet")
-        if GetNumRaidMembers() > 0 then
-            for i = 1, GetNumRaidMembers() do
-                AddUnit("raid" .. i)
-                AddUnit("raidpet" .. i)
-            end
-        else
-            for i = 1, GetNumPartyMembers() do
-                AddUnit("party" .. i)
-                AddUnit("partypet" .. i)
-            end
-        end
-        guidMapDirty = false
-    end
-
-    local function GuidToUnit(guid)
-        if guidMapDirty then
-            RebuildGuidMap()
-        end
-        return guidToUnit[guid]
-    end
-
+    -- Native-like semantics (and oUF_HealComm4 parity): ALL heal types from
+    -- ALL casters, modifier applied. 3s lookahead caps far-future HoT ticks
+    -- (VuhDo's INC_*_SECS default) so amounts match what VuhDo displays.
     function UnitGetIncomingHeals(unit, healer)
         local comm = GetHealComm()
         if not comm then return 0 end
@@ -2279,25 +2509,130 @@ if not UnitGetIncomingHeals then
         local guid = UnitGUID(unit)
         if not guid then return 0 end
 
-        local amount
+        local healerGUID
         if healer then
-            local healerGUID = UnitGUID(healer)
+            healerGUID = UnitGUID(healer)
             if not healerGUID then return 0 end
-            amount = comm:GetHealAmount(guid, comm.CASTED_HEALS, GetTime() + HEAL_WINDOW, healerGUID)
-        else
-            amount = comm:GetHealAmount(guid, comm.CASTED_HEALS, GetTime() + HEAL_WINDOW)
         end
 
+        local amount = comm:GetHealAmount(guid, comm.ALL_HEALS, GetTime() + 3, healerGUID)
         if not amount or amount == 0 then return 0 end
-        return math.floor(amount * (comm:GetHealModifier(guid) or 1) + 0.5)
+        return math.floor(amount * (comm:GetHealModifier(guid) or 1))
     end
 
-    -- UnitGetTotalAbsorbs (4.0+ API): backed by AbsorbsMonitor-1.0
-    -- (CLEU + tooltip + comm based absorb tracking, from CRF_HealEx).
-    -- Falls back to 0 without the lib. Note: Cell's own CLEU tracker in
-    -- UnitButton_Cata_Wrath.lua maintains its richer per-spell absorbInfos
-    -- independently; this polyfill serves generic UnitGetTotalAbsorbs callers.
-    if not UnitGetTotalAbsorbs then
+    -- Same unit-token walk ClassicAPI uses, but fire for EVERY matching token
+    -- (no break): a unit can be visible as raid5 AND target/focus (Spotlight)
+    local UNIT_INDEX = {"player", "pet", "target", "focus"}
+    for i = 1, 4 do
+        UNIT_INDEX[#UNIT_INDEX + 1] = "party" .. i
+        UNIT_INDEX[#UNIT_INDEX + 1] = "partypet" .. i
+    end
+    for i = 1, 40 do
+        UNIT_INDEX[#UNIT_INDEX + 1] = "raid" .. i
+        UNIT_INDEX[#UNIT_INDEX + 1] = "raidpet" .. i
+    end
+
+    local function FireForGUIDs(...)
+        if not EventHandler then return end
+        local total = select("#", ...)
+        if total == 0 then return end
+
+        local raid = GetNumRaidMembers()
+        local limit = 4 + (raid > 0 and 8 + raid * 2 or GetNumPartyMembers() * 2)
+
+        for t = 1, limit do
+            local unit = UNIT_INDEX[t]
+            local unitGUID = unit and UnitGUID(unit)
+            if unitGUID then
+                for i = 1, total do
+                    if unitGUID == select(i, ...) then
+                        EventHandler.Fire(nil, "UNIT_HEAL_PREDICTION", unit)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    -- Active-heal set: while a GUID has pending heals we repaint on a short
+    -- clock, because HoT ticks slide through the 3s window WITHOUT any
+    -- HealComm callback; entries drop themselves when the lib reports nothing
+    local activeHeals = {}
+
+    local function OnHealEvent(event, casterGUID, spellID, healType, endTime, ...)
+        for i = 1, select("#", ...) do
+            activeHeals[select(i, ...)] = true
+        end
+        FireForGUIDs(...)
+    end
+
+    local function OnHealModified(event, guid)
+        FireForGUIDs(guid)
+    end
+
+    --! CRITICAL: LibHealComm loads AFTER Polyfills.lua (Cell.toc: Polyfills
+    --! at line 17, Libs\LoadLibs_Classic.xml at line 21), so registering
+    --! callbacks at file load silently does nothing - that's why the predict
+    --! vanished entirely. ClassicAPI solves this with a lazy OnRegister hook
+    --! on the event definition: it runs when the FIRST Cell button registers
+    --! UNIT_HEAL_PREDICTION, long after all libs are loaded. We redefine that
+    --! same hook (single path - replaces ClassicAPI's player-only handler,
+    --! never runs alongside it) with full callbacks.
+    local owner = "Cell_HealPrediction"
+    local registered = false
+
+    local function UNIT_HEAL_PREDICTION_EH(trigger)
+        local comm = GetHealComm()
+        if trigger == "OnRegister" then
+            if comm and not registered then
+                registered = true
+                comm.RegisterCallback(owner, "HealComm_HealStarted", OnHealEvent)
+                comm.RegisterCallback(owner, "HealComm_HealUpdated", OnHealEvent)
+                comm.RegisterCallback(owner, "HealComm_HealDelayed", OnHealEvent)
+                comm.RegisterCallback(owner, "HealComm_HealStopped", OnHealEvent)
+                comm.RegisterCallback(owner, "HealComm_ModifierChanged", OnHealModified)
+                comm.RegisterCallback(owner, "HealComm_GUIDDisappeared", OnHealModified)
+            end
+        else
+            if comm and registered then
+                registered = false
+                comm.UnregisterCallback(owner, "HealComm_HealStarted")
+                comm.UnregisterCallback(owner, "HealComm_HealUpdated")
+                comm.UnregisterCallback(owner, "HealComm_HealDelayed")
+                comm.UnregisterCallback(owner, "HealComm_HealStopped")
+                comm.UnregisterCallback(owner, "HealComm_ModifierChanged")
+                comm.UnregisterCallback(owner, "HealComm_GUIDDisappeared")
+            end
+        end
+    end
+
+    if EventHandler and EventHandler.Define then
+        -- Overwrites ClassicAPI's broken player-only hook for this event;
+        -- "Event" is already defined by ClassicAPI, no need to redefine it
+        EventHandler.Define("OnRegister", "UNIT_HEAL_PREDICTION", UNIT_HEAL_PREDICTION_EH)
+        EventHandler.Define("OnUnregister", "UNIT_HEAL_PREDICTION", UNIT_HEAL_PREDICTION_EH)
+    end
+
+    -- Repaint clock: only runs while something is in activeHeals
+    local clock = CreateFrame("Frame", "CellHealPredictionClock")
+    local elapsed = 0
+    clock:SetScript("OnUpdate", function(self, delta)
+        elapsed = elapsed + delta
+        if elapsed < 0.25 then return end
+        elapsed = 0
+        if not next(activeHeals) then return end
+        local lib = GetHealComm()
+        for guid in pairs(activeHeals) do
+            if not lib or not lib:GetHealAmount(guid, lib.ALL_HEALS) then
+                activeHeals[guid] = nil
+            end
+            FireForGUIDs(guid)
+        end
+    end)
+
+    -- Absorbs: ClassicAPI stubs UnitGetTotalAbsorbs to always return 0;
+    -- back it with AbsorbsMonitor-1.0 when present (Cell ships the lib)
+    do
         local absorbComm
         local function GetAbsorbComm()
             if absorbComm == nil then
@@ -2307,94 +2642,13 @@ if not UnitGetIncomingHeals then
         end
 
         function UnitGetTotalAbsorbs(unit)
-            local comm = GetAbsorbComm()
-            if not comm then return 0 end
+            local lib = GetAbsorbComm()
+            if not lib then return 0 end
             local guid = unit and UnitGUID(unit)
             if not guid then return 0 end
-            return comm.Unit_Total(guid) or 0
+            return lib.Unit_Total(guid) or 0
         end
     end
-    -- Heal absorbs (healing-reduction shields) genuinely don't exist on 3.3.5
-    if not UnitGetTotalHealAbsorbs then
-        function UnitGetTotalHealAbsorbs() return 0 end
-    end
-
-    -- Synthetic UNIT_HEAL_PREDICTION dispatch --------------------------------
-    -- Frames that RegisterEvent("UNIT_HEAL_PREDICTION") never receive it from
-    -- the 3.3.5 client, so we track them (via the same metatable hook pattern
-    -- as the roster proxy) and fire their OnEvent handler from HealComm
-    -- callbacks.
-    local healPredFrames = setmetatable({}, { __mode = "k" })
-
-    do
-        local sample = CreateFrame("Frame")
-        local mt = getmetatable(sample)
-        mt = mt and mt.__index
-        if mt and mt.RegisterEvent and not mt._CellHealPredictionHook then
-            hooksecurefunc(mt, "RegisterEvent", function(self, event)
-                if event == "UNIT_HEAL_PREDICTION" then
-                    healPredFrames[self] = true
-                end
-            end)
-            hooksecurefunc(mt, "UnregisterEvent", function(self, event)
-                if event == "UNIT_HEAL_PREDICTION" then
-                    healPredFrames[self] = nil
-                end
-            end)
-            hooksecurefunc(mt, "UnregisterAllEvents", function(self)
-                healPredFrames[self] = nil
-            end)
-            mt._CellHealPredictionHook = true
-        end
-    end
-
-    local function FireHealPrediction(guid)
-        local unit = GuidToUnit(guid)
-        if not unit then return end
-        for frame in pairs(healPredFrames) do
-            local handler = frame:GetScript("OnEvent")
-            if handler then
-                pcall(handler, frame, "UNIT_HEAL_PREDICTION", unit)
-            end
-        end
-    end
-
-    local callbackOwner = {}
-    local function OnHealEvent(event, casterGUID, spellID, healType, endTime, ...)
-        for i = 1, select("#", ...) do
-            FireHealPrediction((select(i, ...)))
-        end
-    end
-    local function OnHealStopped(event, casterGUID, spellID, healType, interrupted, ...)
-        for i = 1, select("#", ...) do
-            FireHealPrediction((select(i, ...)))
-        end
-    end
-    local function OnModifierChanged(event, guid)
-        FireHealPrediction(guid)
-    end
-
-    -- Init frame: LibHealComm loads after Polyfills, so wire up on login;
-    -- roster events invalidate the GUID map.
-    local initFrame = CreateFrame("Frame", "CellHealPredictionProxy")
-    initFrame:RegisterEvent("PLAYER_LOGIN")
-    initFrame:RegisterEvent("PARTY_MEMBERS_CHANGED")
-    initFrame:RegisterEvent("RAID_ROSTER_UPDATE")
-    initFrame:RegisterEvent("UNIT_PET")
-    initFrame:SetScript("OnEvent", function(self, event)
-        if event == "PLAYER_LOGIN" then
-            local comm = GetHealComm()
-            if comm then
-                comm.RegisterCallback(callbackOwner, "HealComm_HealStarted", OnHealEvent)
-                comm.RegisterCallback(callbackOwner, "HealComm_HealUpdated", OnHealEvent)
-                comm.RegisterCallback(callbackOwner, "HealComm_HealDelayed", OnHealEvent)
-                comm.RegisterCallback(callbackOwner, "HealComm_HealStopped", OnHealStopped)
-                comm.RegisterCallback(callbackOwner, "HealComm_ModifierChanged", OnModifierChanged)
-                comm.RegisterCallback(callbackOwner, "HealComm_GUIDDisappeared", OnModifierChanged)
-            end
-        end
-        guidMapDirty = true
-    end)
 end
 
 -- LocalizedClassList
@@ -2937,17 +3191,53 @@ do
     end
 
     -- Fix 3: GetClickCastingSpellList fails with mixed-case class names
+    -- + PRIEST list is missing Binding Heal (base id 32546; the list uses
+    --   rank-1 ids and F.GetMaxSpellRank resolves the top rank, 48120 on 3.3.5)
+    local missingSpells = {
+        ["PRIEST"] = {
+            { id = 32546, after = 2060 }, -- Binding Heal, after Greater Heal
+        },
+    }
+
     local function PatchGetClickCastingSpellList()
         if not Cell or not Cell.funcs or not Cell.funcs.GetClickCastingSpellList then return end
         if Cell._GetClickCastingSpellListPatched then return end
         Cell._GetClickCastingSpellListPatched = true
 
         local orig_GetClickCastingSpellList = Cell.funcs.GetClickCastingSpellList
-        Cell.funcs.GetClickCastingSpellList = function(class)
+        Cell.funcs.GetClickCastingSpellList = function(class, ...)
             if class and type(class) == "string" then
                 class = string.upper(class)
             end
-            return orig_GetClickCastingSpellList(class)
+            local spells = orig_GetClickCastingSpellList(class, ...)
+
+            local missing = spells and missingSpells[class]
+            if missing then
+                local F = Cell.funcs
+                for _, m in ipairs(missing) do
+                    local present, insertAt
+                    for i, t in ipairs(spells) do
+                        if t[4] == m.id then
+                            present = true
+                            break
+                        end
+                        if t[4] == m.after then
+                            insertAt = i + 1
+                        end
+                    end
+                    if not present then
+                        local name, icon = F.GetSpellInfo(m.id)
+                        if name then -- spell known to the client
+                            -- same entry shape as the original builder:
+                            -- {icon, name, spellType, spellId, maxRank}
+                            local rank = F.GetMaxSpellRank and F.GetMaxSpellRank(m.id) or nil
+                            tinsert(spells, insertAt or (#spells + 1), {icon, name, nil, m.id, rank})
+                        end
+                    end
+                end
+            end
+
+            return spells
         end
     end
 
