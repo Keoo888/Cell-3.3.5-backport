@@ -944,7 +944,10 @@ end
 
 local timer
 function buffTrackerFrame:GroupRosterUpdate(immediate)
-    if timer then timer:Cancel() end
+    if timer then
+        timer:Cancel()
+        timer = nil
+    end
     -- if IsInGroup() then
         buffTrackerFrame:RegisterEvent("READY_CHECK")
         buffTrackerFrame:RegisterEvent("UNIT_FLAGS")
@@ -1114,6 +1117,16 @@ local function UpdateTools(which)
                 "GroupRosterUpdate",
                 "BuffTracker_GroupRosterUpdate"
             )
+            --! WotLK fix: GroupRosterUpdate arms a 2 s timer for IterateAllUnits and
+            --! only ever cancelled it from its own next run. Switching the tracker
+            --! off in between left that timer live: it fired after the events were
+            --! gone and the bar was reset, walked all 40 units once more and could
+            --! repaint buttons that had just been torn down. Cancel it here too -
+            --! this is the other place that ends a scan cycle.
+            if timer then
+                timer:Cancel()
+                timer = nil
+            end
 
             Reset()
             myUnit = ""

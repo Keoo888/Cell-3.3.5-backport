@@ -764,6 +764,18 @@ local function Actions_Display(self, animationType, color)
     --    print("Actions_Display:", animationType, color[1], color[2], color[3])
     -- end
 
+    --! WotLK perf: an animation nobody can see is pure cost. One successful cast fans
+    --! out through F.HandleUnitButton, which hands the event to the button of the
+    --! CURRENT group type plus every spotlight button drawing that unit, and the
+    --! options pane keeps preview frames wired to the same Display. Each accepted call
+    --! acquires a canvas from the pool, plays a texture animation for its whole
+    --! duration and releases it in OnFinished. IsVisible() is false unless this frame
+    --! and every ancestor up to UIParent are shown, so this returns exactly for the
+    --! frames whose animation would never reach a pixel: buttons of the hidden group
+    --! layout, spotlight frames that are off, and the previews while the options
+    --! window is closed.
+    if not self:IsVisible() then return end
+
     if strfind(animationType, "^C") then
         local subType = strmatch(animationType, "%d")
         local canvas = animationPool.C:Acquire()

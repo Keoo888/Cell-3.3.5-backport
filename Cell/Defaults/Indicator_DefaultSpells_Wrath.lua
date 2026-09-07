@@ -221,6 +221,11 @@ local externals = { -- true: track by name, false: track by id
     ["PALADIN"] = {
         [1022] = true, -- 保护祝福
         [6940] = true, -- 牺牲祝福
+        --! WotLK fix: Hand of Salvation was missing from the paladin externals while
+        --! the other five Hands are all here (id verified in the client's Spell.dbc).
+        --! We already ship 1038 in ClickCasting_DefaultSpells_Wrath.lua, so the spell
+        --! itself is known to the backport - only the indicator default was short.
+        [1038] = true, -- 拯救之手
         [64205] = true, -- 神圣牺牲
         [70940] = true, -- 神圣护卫者
         [19752] = true, -- 神圣干涉

@@ -205,10 +205,22 @@ local function CreateDRPane()
                 F.Print(L["Invalid spell id."])
             end
         end)
+        --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
+        --! Widgets.lua. Parented to drDebuffsList it sat outside that list's
+        --! ScrollFrame subtree, so on a row scrolled past the edge the box drew over
+        --! the list border instead of being clipped with the row.
+        popup:SetOwner(self)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
-        popup:SetFrameStrata("DIALOG")
+        --! WotLK fix: drop the SetFrameStrata("DIALOG") that used to stand here. It
+        --! was already a no-op: this box lives under optionsFrame, which is DIALOG,
+        --! and strata is inherited - and it is the only popup site in the addon that
+        --! set strata by hand. Pinning it explicitly moves the box into its own
+        --! stacking group instead of the row's, which is the one thing we must not do
+        --! now that SetOwner puts it inside the list (that is what UIDropDownMenu.lua
+        --! and ChatFrame.lua use an explicit strata FOR on this client - escaping the
+        --! parent's group). Removing it costs nothing and keeps the box with its row.
         popup:SetTips("|cffababab"..L["Input spell id"])
     end)
 

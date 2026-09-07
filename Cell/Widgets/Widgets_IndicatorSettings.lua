@@ -4368,6 +4368,12 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 F.Print(L["Invalid spell id."])
             end
         end)
+        --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
+        --! Widgets.lua. Owned by `parent` (the widget's own frame) the box sat outside
+        --! the settings pane's ScrollFrame subtree, so a row scrolled past the edge of
+        --! the pane still opened a full-size box over the border instead of being
+        --! clipped along with the row.
+        popup:SetOwner(self)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
@@ -4622,6 +4628,10 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 end
 
             end)
+            --! WotLK fix: same as the new-entry button above - own the box from the
+            --! row (eb:SetOwner). Rows here are pooled and reused, so a box left
+            --! parented to the pane also outlived the row it was editing.
+            popup:SetOwner(auraButtons[i])
             popup:SetPoint("TOPLEFT", auraButtons[i])
             popup:SetPoint("BOTTOMRIGHT", auraButtons[i])
             popup:ShowEditBox(auraButtons[i].spellId or "")
@@ -5620,6 +5630,11 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                 F.Print(L["Invalid spell id."])
             end
         end)
+        --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
+        --! Widgets.lua. Same case as the aura list above: parented to the widget's
+        --! frame the box was outside the pane's ScrollFrame subtree and drew over the
+        --! border for a row scrolled past the edge.
+        popup:SetOwner(self)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
@@ -5811,6 +5826,9 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                     F.Print(L["Invalid spell id."])
                 end
             end)
+            --! WotLK fix: own the box from the row (eb:SetOwner), as above. These rows
+            --! are pooled too, so the box also has to die with the row it edits.
+            popup:SetOwner(actionButtons[i])
             popup:SetPoint("TOPLEFT", actionButtons[i])
             popup:SetPoint("BOTTOMRIGHT", actionButtons[i])
             popup:ShowEditBox(actionButtons[i].spellId or "")

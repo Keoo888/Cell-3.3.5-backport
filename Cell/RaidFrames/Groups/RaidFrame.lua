@@ -407,6 +407,16 @@ end
 
 -- subgroup = number -> only that raid subgroup (separated headers)
 -- subgroup = nil    -> all subgroups enabled in layout["groupFilter"] (combined header)
+
+--! WotLK fix: the leader's main tank heads the tank block, the rest stay
+--! alphabetical. GetPartyAssignment exists on 3.3.5a. Proof: GAP-143.
+local mainTanks = {} -- name -> true, refilled on every call below
+local function MainTankFirst(a, b)
+    local ma, mb = mainTanks[a], mainTanks[b]
+    if ma ~= mb then return ma ~= nil end
+    return a < b
+end
+
 local function BuildRoleSortedNameList(layout, subgroup)
     local total = GetNumRaidMembers()
     if total == 0 then return end
@@ -417,6 +427,7 @@ local function BuildRoleSortedNameList(layout, subgroup)
         prio[role] = i
     end
 
+    wipe(mainTanks)
     local buckets = {{}, {}, {}, {}} -- roleOrder slots 1-3, 4 = NONE/unknown
     for i = 1, total do
         local name, _, sub = GetRaidRosterInfo(i)
@@ -428,15 +439,19 @@ local function BuildRoleSortedNameList(layout, subgroup)
                 wanted = layout["groupFilter"][sub]
             end
             if wanted then
-                local p = prio[Cell.UnitGroupRolesAssigned("raid"..i)] or 4
+                local unit = "raid"..i
+                local p = prio[Cell.UnitGroupRolesAssigned(unit)] or 4
                 tinsert(buckets[p], name)
+                if GetPartyAssignment("MAINTANK", unit) then
+                    mainTanks[name] = true
+                end
             end
         end
     end
 
     local list
     for p = 1, 4 do
-        table.sort(buckets[p]) -- upstream used sortMethod="NAME": alphabetical within a role
+        table.sort(buckets[p], MainTankFirst) -- main tanks first, then alphabetical (upstream: sortMethod="NAME")
         for _, name in ipairs(buckets[p]) do
             if list then
                 list = list..","..name

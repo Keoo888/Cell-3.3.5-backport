@@ -250,6 +250,50 @@ function I.UpdateCustomIndicatorSettings(layout, indicatorName, setting, value, 
 end
 
 -------------------------------------------------
+-- found rows
+-------------------------------------------------
+--! WotLK perf: the "num" custom indicators used to allocate one fresh table per
+--! matched aura, per unit, per aura scan, and throw every one of them away on the
+--! next scan. In a 40-man raid with a couple of tracked auras each that is a steady
+--! stream of short-lived tables handed to the Lua 5.1 collector on a client with no
+--! JIT. The rows are pure value carriers: I.ShowCustomIndicators is their only
+--! reader and it copies the scalars out through SetCooldown without keeping a
+--! reference, so a row is dead the moment the next reset comes round. Recycle them
+--! through a plain stack instead of allocating. All eight slots are written on every
+--! acquire - slot 8 explicitly nil for an indicator without colors - so a recycled
+--! row can never carry the color of whichever indicator used it before.
+local rowPool = {}
+
+local function AcquireRow(order, start, duration, debuffType, icon, count, refreshing, color)
+    local n = #rowPool
+    local row = rowPool[n]
+    if not row then
+        return {order, start, duration, debuffType, icon, count, refreshing, color}
+    end
+    rowPool[n] = nil
+    row[1] = order
+    row[2] = start
+    row[3] = duration
+    row[4] = debuffType
+    row[5] = icon
+    row[6] = count
+    row[7] = refreshing
+    row[8] = color
+    return row
+end
+
+--! Clears the slot before pushing, so calling this twice on the same list (a reset
+--! that finds nothing to repopulate) cannot put one row into the pool twice and
+--! hand the same table out as two different rows.
+local function ReleaseRows(t)
+    for i = #t, 1, -1 do
+        local row = t[i]
+        t[i] = nil
+        rowPool[#rowPool+1] = row
+    end
+end
+
+-------------------------------------------------
 -- reset
 -------------------------------------------------
 function I.ResetCustomIndicators(unitButton, auraType)
@@ -264,7 +308,7 @@ function I.ResetCustomIndicators(unitButton, auraType)
                 if not indicatorTable["found"][unit] then
                     indicatorTable["found"][unit] = {}
                 else
-                    wipe(indicatorTable["found"][unit])
+                    ReleaseRows(indicatorTable["found"][unit])
                 end
             else
                 indicatorTable["topOrder"][unit] = 999
@@ -290,10 +334,14 @@ end
 local function Update(indicator, indicatorTable, unit, spell, start, duration, debuffType, icon, count, refreshing)
     local auraData = indicatorTable["auras"][spell] or indicatorTable["auras"][0]
     if indicatorTable["num"] then
+        --! WotLK perf: pooled row instead of a fresh table per match, and a direct
+        --! append instead of tinsert - the list is a proper sequence here, so the
+        --! extra C call bought nothing.
+        local t = indicatorTable["found"][unit]
         if indicatorTable["hasColor"] then
-            tinsert(indicatorTable["found"][unit], {auraData and auraData[1], start, duration, debuffType, icon, count, refreshing, auraData and auraData[2]})
+            t[#t+1] = AcquireRow(auraData and auraData[1], start, duration, debuffType, icon, count, refreshing, auraData and auraData[2])
         else
-            tinsert(indicatorTable["found"][unit], {auraData, start, duration, debuffType, icon, count, refreshing})
+            t[#t+1] = AcquireRow(auraData, start, duration, debuffType, icon, count, refreshing, nil)
         end
     else
         if indicatorTable["hasColor"] then

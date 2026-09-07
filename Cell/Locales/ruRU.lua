@@ -603,6 +603,12 @@ L["showGlow"] = "Мигающая подсветка"
 --! локаль КЛИЕНТА и не знала про собственный переключатель языка Cell
 --! (CellDB.general.locale), поэтому одна подпись оставалась не в тон остальной панели.
 L["showJump"] = "Анимация обновления (прыжок)"
+--! WotLK fix: tooltip for the same toggle - the checkbox label alone does not say
+--! what "refresh" means here, and the tester asked for an explanation on hover.
+--! No ":" in these strings - see the SHOW_JUMP_TOOLTIP comment in Indicators.lua.
+L["The icon hops when the aura is refreshed - its stack grows or its duration starts over"] = "Иконка подпрыгивает, когда аура обновляется - вырос стак или заново пошла длительность"
+L["Nothing else changes, the countdown and the stack count keep working"] = "Больше ничего не меняется, отсчёт и число стаков работают как раньше"
+L["Appearance tab holds the same switch for every aura icon at once"] = "Такой же выключатель сразу для всех иконок аур - во «Внешнем виде»"
 L["The icon stays either way"] = "Иконка остаётся в любом случае"
 --! WotLK fix: настройки аггро-индикаторов, см. UnitButton_UpdateThreat.
 L["hideForTanks"] = "Не показывать танкам"

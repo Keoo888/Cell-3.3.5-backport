@@ -8,6 +8,16 @@
 local _, Cell = ...
 local F = Cell.funcs
 
+--! WotLK fix: 2026-09-07 collision pass. 18 spell names in this file were claimed twice
+--! inside one instance, and a bare id is keyed BY NAME (F.GetDebuffList), so only one of
+--! the two rows existed - which one was up to `pairs` order over the boss tables. Fixed
+--! two ways: the narrower row got quotes (quoted = trackByID, keyed by its own id) while
+--! the broad row keeps the name key, and the two faction-mirrored encounters (ToC
+--! Champions, Nexus commanders) have their shared ids moved into the instance's
+--! ["general"] list, so one working row covers whichever side the raid faces. Proof per
+--! record is in the registry, GAP-142 in audit/STUDY_GAPS.md - the lists here stay data
+--! only. Every label in this file already matched the client's Spell.dbc
+--! (`dbc_probe.py --labels`).
 local debuffs = {
     [753] = { -- 阿尔卡冯的宝库
         ["general"] = {
@@ -66,9 +76,9 @@ local debuffs = {
             54125, -- 蛛网喷射
         },
         [1604] = { -- Noth the Plaguebringer
-            29212, -- 残废术
-            32736, -- 致死打击
-            54814, -- 残废
+            "29212", -- Cripple
+            "32736", -- Mortal Strike
+            54814, -- Cripple
             54835, -- 药剂师诅咒
             54836, -- 药剂师的怒火
         },
@@ -89,6 +99,12 @@ local debuffs = {
         [1608] = { -- Gothik the Harvester
             27825, -- 暗影遮罩
             55645, -- 死亡疫病
+            --! WotLK fix: Drain Life - the Unrelenting Riders' drain, taken from the
+            --! NoM0Re fork 2026-09-06. Sits next to 55645 Death Plague, which is the
+            --! same encounter's other add ability. Name is unique inside Naxxramas
+            --! (id verified in the client's Spell.dbc; the list keys BY NAME, so an
+            --! id whose name is already present in this instance is not added).
+            55646, -- Drain Life
         },
         [1609] = { -- The Four Horsemen
             -28832, -- 库尔塔兹印记
@@ -136,6 +152,15 @@ local debuffs = {
         [1616] = { -- 萨塔里奥
             57491, -- 烈焰之啸
             60708, -- 护甲衰减
+            --! WotLK fix: three of Sartharion's own abilities were missing, taken from
+            --! the NoM0Re fork 2026-09-06. Tail Lash is the melee-range knockback,
+            --! Magma the lava wave, Twilight Shift the portal debuff. All three ids
+            --! exist in the client's Spell.dbc and none of their names is already used
+            --! inside this instance - the list keys BY NAME, so a duplicate name would
+            --! have replaced the entry that is there.
+            56910, -- Tail Lash
+            57634, -- Magma
+            57874, -- Twilight Shift
             -58105, -- 沙德隆之力
             -61248, -- 塔尼布隆之力
             -61251, -- 维斯匹隆之力
@@ -160,7 +185,7 @@ local debuffs = {
             "64847", -- 符文烈焰喷射
             64766, -- 激光弹幕
             62845, -- 断筋
-            50370, -- 破甲攻击
+            "50370", -- Sunder Armor
             -------
             64698, -- 炎爆术
             64697, -- 地震术
@@ -177,7 +202,7 @@ local debuffs = {
             -------
             64638, -- 酸性撕咬
             64649, -- 冰冻吐息
-            -64653, -- 暴风雪
+            "-64653", -- Blizzard
             -64655, -- 冰锥术
             -------
             63551, -- 毒性吐息
@@ -212,6 +237,12 @@ local debuffs = {
             64774, -- 护甲熔化
             64771, -- 熔化护甲
             64021, -- 烈焰龙息
+            --! WotLK fix: Flame Buffet - the stacking burn the Dark Rune Guardians put
+            --! on whoever is closest, taken from the NoM0Re fork 2026-09-06. Id exists
+            --! in the client's Spell.dbc and the name is not already used inside
+            --! Ulduar - the list keys BY NAME, so a duplicate name would have replaced
+            --! the entry already there.
+            64016, -- Flame Buffet
         },
         [1640] = { -- XT-002拆解者
             65121, -- 灼热之光
@@ -231,6 +262,13 @@ local debuffs = {
             62055, -- 脆弱皮肤
             62030, -- 石化吐息
             64002, -- 压碎护甲
+            --! WotLK fix: Stone Grip - Kologarn's grab was missing entirely, the only
+            --! genuine hole among the 201 ids the NoM0Re fork added (dbc_probe.py
+            --! --coverage measured it against the ElvUI + HealBot reference lists: it
+            --! wanted 64290 for 10-man and 64292 for 25-man). One entry covers both:
+            --! the id has no quotes, so F.GetDebuffList keys it BY NAME, and all six
+            --! Stone Grip ids in the client's Spell.dbc share that name.
+            64290, -- Stone Grip
         },
         [1643] = { -- 欧尔莉亚
             64666, -- 野蛮突袭
@@ -238,6 +276,11 @@ local debuffs = {
             64667, -- 撕扯
             -64679, -- 警戒冲击
             -64386, -- 惊骇尖啸
+            --! WotLK fix: Guardian Swarm - the Sanctum Sentries' swarm on Auriaya,
+            --! taken from the NoM0Re fork 2026-09-06. Same checks as the other ids
+            --! added from that fork: present in the client's Spell.dbc, name unique
+            --! inside Ulduar (the list keys BY NAME).
+            64396, -- Guardian Swarm
         },
         [1644] = { -- 霍迪尔
             62469, -- 冰冻
@@ -260,6 +303,17 @@ local debuffs = {
             -62601, -- 寒冰箭
             -62326, -- 卑鄙攻击
             -62604, -- 寒冰箭雨
+            --! WotLK fix: five abilities cast by the adds of Thorim's gauntlet and
+            --! arena were missing, taken from the NoM0Re fork 2026-09-06 (the fork
+            --! files them under this boss; we keep its placement). All five ids exist
+            --! in the client's Spell.dbc and none of their names is already used
+            --! inside Ulduar - the list keys BY NAME, so a duplicate name would have
+            --! replaced an entry that is there.
+            62415, -- Acid Breath
+            62318, -- Barbed Shot
+            64970, -- Fuse Lightning
+            62417, -- Sweep
+            40652, -- Wing Clip
         },
         [1646] = { -- 弗蕾亚
             62861, -- 钢铁根须
@@ -267,6 +321,12 @@ local debuffs = {
             62865, -- 不稳定的能量
             62619, -- 信息素
             62532, -- 监护者之握
+            --! WotLK fix: Broken Bones and Unstable Sun Beam were missing on Freya,
+            --! taken from the NoM0Re fork 2026-09-06. Both ids exist in the client's
+            --! Spell.dbc and neither name is already used inside Ulduar (the list keys
+            --! BY NAME).
+            62354, -- Broken Bones
+            62243, -- Unstable Sun Beam
         },
         [1647] = { -- 米米尔隆
             65026, -- 凝固汽油炸弹
@@ -274,6 +334,10 @@ local debuffs = {
             65192, -- 烈焰遏制
             64616, -- 震耳警报
             -64533, -- 热浪
+            --! WotLK fix: Magnetic Field - the pull inside Mimiron's Magnetic Core
+            --! phase, taken from the NoM0Re fork 2026-09-06. Id exists in the client's
+            --! Spell.dbc, name unique inside Ulduar (the list keys BY NAME).
+            64668, -- Magnetic Field
         },
         [1648] = { -- 维扎克斯将军
             63276, -- 无面者的印记
@@ -307,6 +371,11 @@ local debuffs = {
 
     [757] = { -- 十字军的试炼
         ["general"] = {
+            65542, -- Silence
+            66018, -- Strangulate
+            65930, -- Intimidating Shout
+            65960, -- Blind
+            66613, -- Hammer of Justice
         },
         [1618] = { -- 诺森德猛兽
             66407, -- 裂颅
@@ -329,18 +398,8 @@ local debuffs = {
             66334, -- 女王之吻
         },
         [1620] = { -- 联盟的冠军
-            65542, -- 沉默
-            66018, -- 绞袭
-            65930, -- 破胆怒吼
-            65960, -- 致盲
-            66613, -- 制裁之锤
         },
         [1621] = { -- 部落的冠军
-            65542, -- 沉默
-            66018, -- 绞袭
-            65930, -- 破胆怒吼
-            65960, -- 致盲
-            66613, -- 制裁之锤
         },
         [1622] = { -- 瓦格里双子
             "66069", -- 双生之刺
@@ -494,14 +553,17 @@ local debuffs = {
             69240, -- 邪恶毒气
             69278, -- 毒气孢子
             69290, -- 枯萎的孢子
-            72297, -- 可延展黏液
+            "72297", -- Malleable Goo
             72219, -- 毒肿
             -69291, -- 播种疫苗
             -- "69279", -- 毒气孢子
         },
         [1630] = { -- 腐面
             69674, -- 畸变感染
-            72272, -- 邪恶毒气
+            --! WotLK fix: was unquoted, and Festergut's Vile Gas is 69240 at 1629 - same
+            --! name in Spell.dbc, so one of the two rows was dead by `pairs` order. Quoted
+            --! = trackByID: this row keys on its own id, Festergut's keeps the name key.
+            "72272", -- Vile Gas
             69789, -- 软泥洪流
             --! WotLK fix: missing - the puddle the small oozes leave behind, 18 hits on
             --! 15 players in reference/WoWCombatLog.txt (25-man, 20:55-21:02).
@@ -541,7 +603,14 @@ local debuffs = {
             --! still wins for that one, because Built-in.lua looks the id up first.
             71264, -- Swarming Shadows
             "71265", -- 蜂拥之影
-            70838, -- 鲜血镜像
+            --! WotLK fix: was 70838 unquoted, and ["general"] holds 70451 - both are Blood
+            --! Mirror in the client's Spell.dbc, so the two rows fought over one key and
+            --! the general one lost (a boss row always beats a general row). Quoted =
+            --! trackByID: this row keys on its own id, the general row keeps the name key
+            --! and covers the other raid sizes, exactly like the Swarming Shadows pair
+            --! above. The id is looked up first in Built-in.lua, so this row still wins
+            --! here.
+            "70838", -- Blood Mirror
             70923, -- 失心疯
             --! WotLK fix: three boss mechanics were missing entirely. Proven by
             --! reference/WoWCombatLog.txt (25-man, 20:37-20:48), counted as
@@ -554,14 +623,22 @@ local debuffs = {
             70744, -- 酸性爆炸
             70751, -- 腐蚀
             72963, -- 血肉腐烂
-            -70759, -- 寒冰箭雨
+            --! WotLK fix: 70759 and Lady Deathwhisper's 72905 are both Frostbolt Volley in
+            --! the client's Spell.dbc. Both rows are unchecked by default, so nothing
+            --! collides today - but ticking both would leave one of them dead. Quoted =
+            --! trackByID, so this one keys on its own id once the player enables it.
+            "-70759", -- Frostbolt Volley
         },
         [1635] = { -- 辛达苟萨
             69766, -- 动荡
             69762, -- 狂咒
             70127, -- 秘法打击
             70106, -- 寒霜刺骨
-            69649, -- 冰霜吐息
+            --! WotLK fix: was 69649 unquoted, and ["general"] holds 71386 - both are Frost
+            --! Breath in the client's Spell.dbc, so the general row was swallowed. Quoted =
+            --! trackByID: this row keys on its own id and still wins here (the id is looked
+            --! up before the name), while the general row keeps the broad name key.
+            "69649", -- Frost Breath
             "70157", -- 寒冰坟墓
             --! WotLK fix: was "-70084" - tracked by id. Sindragosa's aura is 71052 on
             --! 25-man (111 hits on all 25 players in reference/WoWCombatLog.txt), so the
@@ -822,7 +899,7 @@ local debuffs = {
             34322, -- 心灵尖啸
             -61460, -- 失落希望光环
             -61461, -- 寒冰箭
-            -59116, -- 毒云
+            "-59116", -- Poison Cloud
         },
         [580] = { -- 纳多克斯长老
             59467, -- 蜘蛛疫病
@@ -896,6 +973,11 @@ local debuffs = {
             72383, -- 腐蚀之触
             72362, -- 腐蚀之井
             72363, -- 腐化血肉
+            --! WotLK fix: Shared Suffering - Marwyn's link that splits damage between
+            --! two players, taken from the NoM0Re fork 2026-09-06. Id exists in the
+            --! client's Spell.dbc and the name is not already used inside Halls of
+            --! Reflection (the list keys BY NAME).
+            72368, -- Shared Suffering
         },
         [603] = { -- 逃离阿尔萨斯
             70176, -- 呕吐
@@ -1021,6 +1103,11 @@ local debuffs = {
             69275, -- 霜牙印记
             69245, -- 霜降
             69238, -- 寒冰冲击
+            --! WotLK fix: Overlord's Brand - Tyrannus' mark that reflects the marked
+            --! player's damage onto the tank, taken from the NoM0Re fork 2026-09-06.
+            --! Id exists in the client's Spell.dbc and the name is not already used
+            --! inside Pit of Saron (the list keys BY NAME).
+            69172, -- Overlord's Brand
         },
     },
 
@@ -1108,8 +1195,8 @@ local debuffs = {
             59529, -- 碎裂践踏
         },
         [599] = { -- 艾欧纳尔
-            59795, -- 静电过载
-            52658, -- 静电超载
+            "59795", -- Static Overload
+            52658, -- Static Overload
             59834, -- 弧光灼烧
         },
         [600] = { -- 洛肯
@@ -1126,18 +1213,16 @@ local debuffs = {
             50132, -- 吸取魔法
             56860, -- 魔法燃烧
             47700, -- 水晶冻结
+            19134, -- Frightening Shout
+            60067, -- Charge
             -56837, -- 寒冰箭
             -38384, -- 冰锥术
             -48053, -- 诱捕
             -30633, -- 雷霆一击
         },
         [617] = { -- 指挥官斯托比德
-            19134, -- 破胆怒吼
-            60067, -- 冲锋
         },
         [833] = { -- 指挥官库鲁尔格
-            19134, -- 破胆怒吼
-            60067, -- 冲锋
         },
         [618] = { -- 大魔导师泰蕾丝塔
             47731, -- 家畜

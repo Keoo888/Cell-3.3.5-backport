@@ -105,13 +105,13 @@ local dumb = Cell.CreateButton(separateAnchor, nil, "accent", {20, 10}, false, t
 dumb:Hide()
 dumb:SetFrameStrata("MEDIUM")
 dumb:SetAllPoints(separateAnchor)
-dumb:SetScript("OnDragStart", function()
-    separateAnchor:StartMoving()
-    separateAnchor:SetUserPlaced(false)
-end)
-dumb:SetScript("OnDragStop", function()
-    separateAnchor:StopMovingOrSizing()
-    P.SavePosition(separateAnchor, Cell.vars.currentLayoutTable["npc"]["position"])
+--! WotLK fix: drag through the shared combat-safe wrapper - see
+--! F.ApplyCombatSafeDrag. This anchor hangs off CellMainFrame and inherits its
+--! protection, so grabbing it as combat started used to glue it to the cursor
+--! for the whole fight. The position table is read at drop time, not captured.
+F.ApplyCombatSafeDrag(separateAnchor, dumb, function()
+    return Cell.vars.currentLayoutTable and Cell.vars.currentLayoutTable["npc"]
+        and Cell.vars.currentLayoutTable["npc"]["position"]
 end)
 dumb:HookScript("OnEnter", function()
     hoverFrame:GetScript("OnEnter")(hoverFrame)

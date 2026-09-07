@@ -749,8 +749,9 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
                     indicator:ShowAnimation(t["showAnimation"])
                 end
                 --! custom: update jump animation (see SESSION_NOTES #20)
-                if type(t["showJump"]) == "boolean" and indicator.ShowJump then
-                    indicator:ShowJump(t["showJump"])
+                --! nil means enabled - apply as true, do not skip (see HandleIndicators)
+                if indicator.ShowJump then
+                    indicator:ShowJump(t["showJump"] ~= false)
                 end
                 -- update duration
                 if type(t["showDuration"]) == "boolean" or type(t["showDuration"]) == "number" then
@@ -1533,6 +1534,10 @@ local function CreateSettingsPane()
 end
 
 local indicatorSettings
+--! custom: file-level local because ShowIndicatorSettings builds the custom-indicator
+--! lists in its own function; filled by BuildLocalizedTables, which runs before any
+--! settings pane is shown (the value needs L[...], so it cannot be built at load time).
+local SHOW_JUMP_TOOLTIP
 
 --! WotLK fix: everything below reads L[...] (and Cell.GetAccentColorString()), so it is
 --! built on the first open of the Indicators tab instead of at load time - see the note
@@ -1610,6 +1615,13 @@ local function BuildLocalizedTables()
 
 local DEBUFFS_TOOLTIP1 = L["This will make these icons not click-through-able"].."|"..L["Tooltips need to be enabled in General tab"]
 local DEBUFFS_TOOLTIP2 = L["This will make these icons not click-through-able"]
+--! custom: explanation for the showJump checkbox, shared by built-in and custom
+--! indicators (see SESSION_NOTES #20). Lines are split on "|" by SetDBValue.
+--! No ":" inside these strings - the setting itself is parsed with
+--! string.split(":", ...), so a colon here would cut the tooltip short.
+SHOW_JUMP_TOOLTIP = L["The icon hops when the aura is refreshed - its stack grows or its duration starts over"]
+    .."|"..L["Nothing else changes, the countdown and the stack count keep working"]
+    .."|"..L["Appearance tab holds the same switch for every aura icon at once"]
 
 indicatorSettings = {
 ["nameText"] = {"enabled", "color-class", "textWidth", "checkbutton:showGroupNumber", "vehicleNamePosition", "position", "frameLevel", "font-noOffset"},
@@ -1644,18 +1656,25 @@ indicatorSettings = {
 ["shieldBar"] = {"enabled", "checkbutton:onlyShowOvershields", "color-alpha", "height", "shieldBarPosition", "frameLevel"},
 ["powerWordShield"] = {L["To show shield value, |cffff2727Glyph of Power Word: Shield|r is required"], "enabled", "checkbutton:shieldByMe", "size-width", "position", "frameLevel"},
 ["aoeHealing"] = {"|cffb7b7b7"..L["Display a gradient texture when the unit receives a heal from your certain healing spells."], "enabled", "builtInAoEHealings", "customAoEHealings", "color", "height"},
-["externalCooldowns"] = {L["Even if disabled, the settings below affect \"Externals + Defensives\" indicator"], "enabled", "builtInExternals", "customExternals", "durationVisibility", "checkbutton:showAnimation", "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
-["defensiveCooldowns"] = {L["Even if disabled, the settings below affect \"Externals + Defensives\" indicator"], "enabled", "builtInDefensives", "customDefensives", "durationVisibility", "checkbutton:showAnimation", "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
-["allCooldowns"] = {"enabled", "durationVisibility", "checkbutton:showAnimation", "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+--! custom: checkbutton2 - showJump for the three cooldown indicators, same toggle as
+--! the debuff ones got (see SESSION_NOTES #20). Their icons hop on refresh too.
+["externalCooldowns"] = {L["Even if disabled, the settings below affect \"Externals + Defensives\" indicator"], "enabled", "builtInExternals", "customExternals", "durationVisibility", "checkbutton:showAnimation", "checkbutton2:showJump:"..SHOW_JUMP_TOOLTIP, "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["defensiveCooldowns"] = {L["Even if disabled, the settings below affect \"Externals + Defensives\" indicator"], "enabled", "builtInDefensives", "customDefensives", "durationVisibility", "checkbutton:showAnimation", "checkbutton2:showJump:"..SHOW_JUMP_TOOLTIP, "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["allCooldowns"] = {"enabled", "durationVisibility", "checkbutton:showAnimation", "checkbutton2:showJump:"..SHOW_JUMP_TOOLTIP, "glowOptions", "size", "num:5", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["dispels"] = {"enabled", "dispelFilters", "highlightType", "dispelBlacklist", "iconStyle", "orientation", "size-square", "position", "frameLevel"},
-["debuffs"] = {"enabled", "checkbutton:dispellableByMe", "debuffBlacklist", "bigDebuffs", "durationVisibility", "checkbutton2:showAnimation", "checkbutton3:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton4:enableBlacklistShortcut:"..DEBUFFS_TOOLTIP2, "size-normal-big", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
-["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+--! custom: checkbutton5/checkbutton3 - showJump, the same jump (refresh) animation
+--! toggle custom indicators already carry (see SESSION_NOTES #20). A stack bump made
+--! the icon hop with no way to switch it off per indicator.
+["debuffs"] = {"enabled", "checkbutton:dispellableByMe", "debuffBlacklist", "bigDebuffs", "durationVisibility", "checkbutton2:showAnimation", "checkbutton3:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton4:enableBlacklistShortcut:"..DEBUFFS_TOOLTIP2, "checkbutton5:showJump:"..SHOW_JUMP_TOOLTIP, "size-normal-big", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton3:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["targetedSpells"] = {"enabled", "checkbutton:showAllSpells:"..L["Glow is only available to the spells in the list below"], "targetedSpellsList", "targetedSpellsGlow", "size-border", "num:3", "orientation", "position", "frameLevel", "font"},
 --! WotLK fix: the "targetCounter" row is deleted along with the indicator (GAP-081) -
 --! counting the enemies that target a unit was only ever possible off nameplates via
 --! C_NamePlate, which does not exist on 3.3.5; the options checkbox switched nothing on.
 ["actions"] = {"|cffb7b7b7"..L["Play animation when the unit uses a specific spell/item. The list is global shared, not layout-specific."], "enabled", "actionsPreview", "actionsList"},
-["crowdControls"] = {"enabled", "builtInCrowdControls", "customCrowdControls", "durationVisibility", "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+--! custom: checkbutton:showJump - first free slot here, this row had no checkbutton
+--! at all (see SESSION_NOTES #20).
+["crowdControls"] = {"enabled", "builtInCrowdControls", "customCrowdControls", "durationVisibility", "checkbutton:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["healthThresholds"] = {"enabled", "thresholds", "thickness"},
 --! WotLK fix: checkbutton:showGlow - тумблер мигающей подсветки иконок.
 ["missingBuffs"] = {"|cffb7b7b7"..(L["%s in Utilities must be enabled to make this indicator work."]:format(Cell.GetAccentColorString()..L["Buff Tracker"].."|r")), "enabled", "checkbutton:showGlow:"..L["The icon stays either way"], "size-square", "orientation", "position", "frameLevel"},
@@ -1692,9 +1711,9 @@ local function ShowIndicatorSettings(id)
         -- end
     else
         if indicatorType == "icon" then
-            settingsTable = {"enabled", "auras", "checkbutton3:showStack", "durationVisibility", "checkbutton4:showAnimation", "checkbutton5:showJump", "glowOptions", CELL_RECTANGULAR_CUSTOM_INDICATOR_ICONS and "size" or "size-square", "position", "frameLevel", "font1:stackFont", "font2:durationFont"}
+            settingsTable = {"enabled", "auras", "checkbutton3:showStack", "durationVisibility", "checkbutton4:showAnimation", "checkbutton5:showJump:"..SHOW_JUMP_TOOLTIP, "glowOptions", CELL_RECTANGULAR_CUSTOM_INDICATOR_ICONS and "size" or "size-square", "position", "frameLevel", "font1:stackFont", "font2:durationFont"}
         elseif indicatorType == "icons" then
-            settingsTable = {"enabled", "auras", "checkbutton3:showStack", "durationVisibility", "checkbutton4:showAnimation", "checkbutton5:showJump", "glowOptions", CELL_RECTANGULAR_CUSTOM_INDICATOR_ICONS and "size" or "size-square", "num:10", "numPerLine:10", "spacing", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"}
+            settingsTable = {"enabled", "auras", "checkbutton3:showStack", "durationVisibility", "checkbutton4:showAnimation", "checkbutton5:showJump:"..SHOW_JUMP_TOOLTIP, "glowOptions", CELL_RECTANGULAR_CUSTOM_INDICATOR_ICONS and "size" or "size-square", "num:10", "numPerLine:10", "spacing", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"}
         elseif indicatorType == "text" then
             settingsTable = {"enabled", "auras", "duration", "stack", "colors", "position", "frameLevel", "font-noOffset"}
         elseif indicatorType == "bar" then

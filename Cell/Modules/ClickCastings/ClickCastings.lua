@@ -1174,6 +1174,12 @@ local function ShowActionsMenu(index, b)
                     CheckChanged(index, b)
                     CheckChanges()
                 end, true)
+                --! WotLK fix: own the box from the cell it edits - see eb:SetOwner in
+                --! Widgets.lua. Parented to clickCastingsTab it was outside the binding
+                --! list's ScrollFrame subtree, so on a row scrolled past the edge of the
+                --! list the box drew over the border, and a row recycled underneath it
+                --! left the box floating over a different binding.
+                peb:SetOwner(b.actionGrid)
                 peb:SetPoint("TOPLEFT", b.actionGrid)
                 peb:SetPoint("TOPRIGHT", b.actionGrid)
                 P.Height(peb, 20)
@@ -1352,6 +1358,9 @@ local function ShowActionsMenu(index, b)
                         CheckChanged(index, b)
                         CheckChanges()
                     end)
+                    --! WotLK fix: own the box from the cell it edits (eb:SetOwner), same
+                    --! as the custom-binding editor above.
+                    peb:SetOwner(b.actionGrid)
                     P.Point(peb, "TOPLEFT", b.actionGrid)
                     P.Point(peb, "BOTTOMRIGHT", b.actionGrid)
                     peb:SetTips("|cffababab"..L["Input spell id"].."\n"..L["Enter: apply\nESC: discard"])

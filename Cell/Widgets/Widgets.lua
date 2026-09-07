@@ -2258,6 +2258,28 @@ function Cell.CreatePopupEditBox(parent, func, multiLine)
             tipsText:Hide()
             tipsBackground:Hide()
         end)
+
+        --! WotLK fix: hand the box to the row it is editing, for two reasons that
+        --! only bite on this client.
+        --! 1. Clipping. A ScrollFrame on 3.3.5a clips its whole scroll-child
+        --!    subtree (there is no SetClipsChildren and no mask texture - see
+        --!    Indicators/Actions.lua CreateClip). The box is owned by the tab or the
+        --!    panel, i.e. OUTSIDE that subtree, so a row scrolled half past the edge
+        --!    of the list still opened a full-size edit box hanging over the list
+        --!    border. Parented to the row it is clipped exactly like the row is.
+        --! 2. The OnHide above says "hide self when parent hides" - but the parent is
+        --!    the tab, not the row, so it never fired for a row. Delete an entry with
+        --!    the box open and it stayed floating over a button that had already been
+        --!    recycled for a different spell.
+        --! Order matters and is not cosmetic: SetParent RESETS the frame level on
+        --! 3.3.5a. Blizzard says so in as many words on this build - LFDFrame.lua:1003
+        --! "Setting a new parent changes the frame level, so we need to move it back".
+        --! Hence level after parent, never before. Points stay with the caller: the
+        --! click-casting rows cover one grid cell, the list rows cover the whole row.
+        function eb:SetOwner(owner)
+            eb:SetParent(owner)
+            eb:SetFrameLevel(owner:GetFrameLevel() + 50)
+        end
     end
 
     parent.popupEditBox:SetScript("OnEnterPressed", function(self)
@@ -2273,6 +2295,14 @@ function Cell.CreatePopupEditBox(parent, func, multiLine)
     -- set parent(for hiding) & size
     parent.popupEditBox:ClearAllPoints()
     -- parent.popupEditBox:SetFrameStrata("DIALOG")
+    --! WotLK fix: hand the box back to `parent` before handing out the reference.
+    --! The box is cached in parent.popupEditBox but SetOwner above moves the real
+    --! frame onto a row, and rows are pooled and reused. Without this reset a caller
+    --! that does not claim ownership would inherit whatever row the PREVIOUS caller
+    --! left it on - and get that row's clipping and visibility. Resetting here makes
+    --! every call start from a known parent; the level line after it is the one that
+    --! matters, because SetParent has just cleared the old one.
+    parent.popupEditBox:SetParent(parent)
     parent.popupEditBox:SetFrameLevel(parent:GetFrameLevel() + 50)
 
     return parent.popupEditBox

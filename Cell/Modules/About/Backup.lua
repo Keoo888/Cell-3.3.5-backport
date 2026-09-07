@@ -103,6 +103,11 @@ local function CreateItem(index)
             CellDBBackup[index]["desc"] = text
             b.text:SetText(text)
         end)
+        --! WotLK fix: the box belongs to the row it edits - see eb:SetOwner in
+        --! Widgets.lua. Owned by backupFrame it was outside the list's ScrollFrame
+        --! subtree, so on a row scrolled half past the edge it drew over the border,
+        --! and deleting the backup underneath left it floating over a recycled row.
+        popup:SetOwner(b)
         popup:SetPoint("TOPLEFT", b)
         popup:SetPoint("BOTTOMRIGHT", b)
         popup:ShowEditBox(CellDBBackup[index]["desc"])
@@ -169,6 +174,8 @@ local function CreateBackupFrame()
             })
             LoadBackups()
         end)
+        --! WotLK fix: same as the rename box - own it from the row (eb:SetOwner).
+        popup:SetOwner(self)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox(date(DATE_FORMAT))

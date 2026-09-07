@@ -22,19 +22,42 @@ Cell_ExpansionData.locale = "ruRU"
 --! строку: иногда целиком другое имя (Hyjal Summit против ретейльного The Battle for
 --! Mount Hyjal), иногда ту же фразу с другим регистром или артиклем. Поиск зоны идёт
 --! точным ключом таблицы, поэтому любое расхождение означает, что дебаффы зоны просто
---! не включаются - молча. Ключи ниже - клиентские написания 3.3.5a по
---! LibBabble-Zone-3.0, значения - записи этого пейлоада. Верным окажется какой-то
---! один из двух, и оба ведут на одну запись, поэтому лишним псевдоним быть не может.
+--! не включаются - молча.
+--!
+--! WotLK fix (2026-09-04): six labels below the table were changed to the name this
+--! CLIENT uses, because the options list is read next to the game and a name the player
+--! never sees on screen is worth nothing to them. Only those six diverged in a way both
+--! reference corpora agree on: LibBabble-Zone-3.0 rev 268 and rev 285 (shipped with
+--! other 3.3.5a addons) and the ruRU zone strings DBM for Warmane loads its modules on.
+--! Three more names differ between those two corpora - Ragefire Chasm, Dire Maul and
+--! Lower Blackrock Spire - and there the label already matches DBM, so it stays as is.
+--!
+--! Keys here are therefore of two kinds now, and both are needed. The retail spelling of
+--! a renamed label is kept because part of the Russian 3.3.5a audience runs a fan-made
+--! translation patch built from modern data, which may well hand GetRealZoneText exactly
+--! that wording. The rest are the SECOND name the client knows for the same instance:
+--! GetInstanceInfo returns the MAP name and GetRealZoneText the ZONE name, and for these
+--! entries they differ. The four at the bottom were simply missing: the English table in
+--! ExpansionData.lua carries all four (Ahn'Qiraj, Blackrock Spire, Sunken Temple,
+--! Tempest Keep) while its Russian counterpart did not, so on a Russian client those
+--! zones resolved to nothing and their debuffs never lit up.
 Cell_ExpansionData.instanceNameAliases = {
-    ["Склеп Аркавона"] = "Хранилище Аркавона", -- Vault of Archavon
-    ["Вершина Хиджала"] = "Битва за гору Хиджал", -- The Battle for Mount Hyjal
-    ["Гробницы Маны"] = "Гробницы маны", -- Mana-Tombs
-    ["Огненные Недра"] = "Огненные недра", -- Molten Core
-    ["Храм Ан'Кираж"] = "Храм Ан'Киража", -- Temple of Ahn'Qiraj
+    -- retail wording of a label that now carries the client's own name
+    ["Хранилище Аркавона"] = "Склеп Аркавона", -- Vault of Archavon
+    ["Битва за гору Хиджал"] = "Вершина Хиджала", -- The Battle for Mount Hyjal
+    ["Гробницы маны"] = "Гробницы Маны", -- Mana-Tombs
+    ["Огненные недра"] = "Огненные Недра", -- Molten Core
+    ["Храм Ан'Киража"] = "Храм Ан'Кираж", -- Temple of Ahn'Qiraj
+    ["Храм Атал'Хаккар"] = "Храм Атал'Хаккара", -- The Temple of Atal'hakkar
+    -- second client spelling of an unchanged label
     ["Забытый Город"] = "Забытый город", -- Dire Maul
     ["Нижний ярус Черной горы"] = "Нижняя часть пика Черной горы", -- Lower Blackrock Spire
     ["Огненная пропасть"] = "Огненная Пропасть", -- Ragefire Chasm
-    ["Храм Атал'Хаккара"] = "Храм Атал'Хаккар", -- The Temple of Atal'hakkar
+    -- the instance's other client name, map against zone (mirrors the English table)
+    ["Ан'Кираж"] = "Храм Ан'Кираж", -- Ahn'Qiraj
+    ["Пик Черной горы"] = "Нижняя часть пика Черной горы", -- Blackrock Spire, shared with UBRS
+    ["Затонувший храм"] = "Храм Атал'Хаккара", -- Sunken Temple
+    ["Крепость Бурь"] = "Око", -- Tempest Keep
 }
 
 --! WotLK fix: семь пост-WotLK эпох вырезаны из литерала - причина и счёт в
@@ -205,7 +228,7 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 750,
             ["image"] = 608198,
-            ["name"] = "Битва за гору Хиджал",
+            ["name"] = "Вершина Хиджала",
             ["bosses"] = {
                 {
                     ["id"] = 1577,
@@ -424,7 +447,7 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 250,
             ["image"] = 608193,
-            ["name"] = "Гробницы маны",
+            ["name"] = "Гробницы Маны",
             ["bosses"] = {
                 {
                     ["id"] = 534,
@@ -715,7 +738,7 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 741,
             ["image"] = 1396586,
-            ["name"] = "Огненные недра",
+            ["name"] = "Огненные Недра",
             ["bosses"] = {
                 {
                     ["id"] = 1519,
@@ -856,7 +879,7 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 744,
             ["image"] = 1396593,
-            ["name"] = "Храм Ан'Киража",
+            ["name"] = "Храм Ан'Кираж",
             ["bosses"] = {
                 {
                     ["id"] = 1543,
@@ -1813,7 +1836,7 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 237,
             ["image"] = 608217,
-            ["name"] = "Храм Атал'Хаккар",
+            ["name"] = "Храм Атал'Хаккара",
             ["bosses"] = {
                 {
                     ["id"] = 457,
@@ -1842,7 +1865,12 @@ Cell_ExpansionData.data = {
         {
             ["id"] = 753,
             ["image"] = 1396596,
-            ["name"] = "Хранилище Аркавона",
+            --! WotLK fix: the dump brought the retail Russian name. This client calls the
+            --! raid "Склеп Аркавона" - LibBabble-Zone-3.0 rev 268 and 285 agree, DBM for
+            --! Warmane loads its Archavon module on exactly that zone string, and the owner
+            --! reads the same name on screen. The options list is read next to the game, so
+            --! the label has to be the client's name; the retail one stays as an alias.
+            ["name"] = "Склеп Аркавона",
             ["bosses"] = {
                 {
                     ["id"] = 1597,

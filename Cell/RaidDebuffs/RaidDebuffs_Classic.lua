@@ -24,6 +24,44 @@ local debuffs = {
     --! own convention, see RaidDebuffs_WotLK.lua). Used for the melee filler that sits
     --! on the tank permanently - having Sunder Armor light up the raid-debuff icon for
     --! the whole instance is worse than not having it.
+    --! WotLK fix: second pass over the same fork on 2026-09-06 brought 44 more ids, all
+    --! of them into ["general"] lists. Eight instances had nothing at all to tick in the
+    --! raid-debuff window: Shadowfang Keep, Maraudon, Razorfen Downs, Sunken Temple,
+    --! Uldaman, Wailing Caverns, Scarlet Monastery and Ruins of Ahn'Qiraj. Five more had
+    --! their bosses but no trash abilities: Deadmines, Razorfen Kraul, Stratholme,
+    --! Blackwing Lair, Temple of Ahn'Qiraj. Same checks as above - every id exists in the
+    --! client's Spell.dbc and carries the name the database returns, one entry per NAME
+    --! inside an instance, nothing whose instance or boss key our build cannot resolve.
+    --! Ids are appended at the end of each list on purpose: LoadBuiltInDebuffs numbers
+    --! `order` by position, so appending leaves the icon priority of everything already
+    --! listed untouched.
+    --! Ragefire Chasm, Blackfathom Deeps, Blackrock Depths, Gnomeregan, The Stockade,
+    --! Scholomance and Scarlet Halls are still empty because the fork has them empty too.
+    --! Zul'Gurub is not touched by this pass - the [76] block below already carries its
+    --! ids and the list of what was rejected there. The fork's own [745] is Naxxramas
+    --! (40), not Karazhan; its eight ids are already present in our [900745].
+--! Three more ids were nearly lost because the fork comparison was an id-set diff over
+--! the whole file: 25646 Mortal Wound (Ruins of Ahn'Qiraj), 7645 Dominate Mind
+--! (Razorfen Downs) and 13005 Hammer of Justice (The Eye, TBC file) were already listed
+--! by us - but under a DIFFERENT instance, and a raid-debuff row only ticks inside the
+--! instance it is keyed under. Compare per instance, not per file.
+    --! WotLK fix: 2026-09-07 label pass. Every Latin-script label in this file is now the
+    --! name the client's own Spell.dbc returns for that id, checked by
+    --! `dbc_probe.py --labels` (the owner of this invariant - it re-reads the client every
+    --! run). Labels inherited from retail/fork data disagreed with the client on 30 rows
+    --! across the three data files; most were just a wrong caption on a working row
+    --! (23153..23155 Brood Affliction colours, 13338 Curse of Tongues, 16247 Curse of
+    --! Thorns, 28158 Poison, 28169 Mutating Injection here), but eight named a mechanic
+    --! whose id pointed somewhere else entirely and had their id replaced: Shazzrah 19714,
+    --! Nefarian 22667 (+22539 added), Ouro 26615/26616, Faerlina 28798, Loatheb 29234,
+    --! Razuvious 28732, Blind Hunter 32065 here, Hydross 38246 in the TBC file. The same
+    --! pass also unstuck 26 names that were claimed twice inside one instance, where only
+    --! one of the two checkboxes did anything. Proof per record - old id, client name, why
+    --! the old row could not fire - is in the registry, GAP-142 in audit/STUDY_GAPS.md;
+    --! the lists here stay data only. Why labels are not cosmetic: a bare id is keyed BY
+    --! NAME (F.GetDebuffList), so the client's name for the id - not the label - decides
+    --! what the checkbox catches. The five remaining mismatches are the known Cataclysm
+    --! ids that do not exist in this client at all (dbc_probe BASELINE).
     [741] = { -- Molten Core
         ["general"] = {
             19366, -- Cauterizing Flames
@@ -52,7 +90,7 @@ local debuffs = {
         },
         [1523] = { -- Shazzrah
             19713, -- Shazzrah's Curse
-            19714, -- Deaden Magic
+            19714, -- Magic Grounding
             19715, -- Counterspell
         },
         [1524] = { -- Baron Geddon
@@ -86,6 +124,8 @@ local debuffs = {
 
     [742] = { -- Blackwing Lair
         ["general"] = {
+            23023, -- Conflagration
+            22687, -- Veil of Shadow
         },
         [1529] = { -- Razorgore the Untamed
         },
@@ -103,18 +143,19 @@ local debuffs = {
             23340, -- Shadow of Ebonroc
         },
         [1534] = { -- Flamegor
-            23342, -- Frenzy
+            23342, -- Enrage (Flamegor frenzy)
         },
         [1535] = { -- Chromaggus
-            23128, -- Frost Burn
-            23153, -- Brood Affliction: Black
-            23154, -- Brood Affliction: Red
-            23155, -- Brood Affliction: Blue
+            "23128", -- Enrage (Chromaggus frenzy)
+            23153, -- Brood Affliction: Blue
+            23154, -- Brood Affliction: Black
+            23155, -- Brood Affliction: Red
             23169, -- Brood Affliction: Green
             23170, -- Brood Affliction: Bronze
         },
         [1536] = { -- Nefarian
-            22667, -- Shadow Flame
+            22667, -- Shadow Command
+            22539, -- Shadow Flame
             22686, -- Bellowing Roar
         },
     },
@@ -219,6 +260,11 @@ local debuffs = {
 
     [743] = { -- 安其拉废墟
         ["general"] = {
+            25471, -- Attack Order
+            96, -- Dismember
+            25725, -- Paralyze
+            25189, -- Enveloping Winds
+            25646, -- Mortal Wound
         },
         [1537] = { -- 库林纳克斯
         },
@@ -236,6 +282,9 @@ local debuffs = {
 
     [744] = { -- Temple of Ahn'Qiraj
         ["general"] = {
+            26580, -- Fear
+            26050, -- Acid Spit
+            26180, -- Wyvern Sting
         },
         [1543] = { -- The Prophet Skeram
             785, -- True Fulfillment (Mind Control)
@@ -257,12 +306,11 @@ local debuffs = {
             26613, -- Unbalancing Strike
         },
         [1550] = { -- Ouro
-            26615, -- Sweep
-            26616, -- Sand Blast
+            26103, -- Sweep
+            26102, -- Sand Blast
         },
         [1551] = { -- C'Thun
             26476, -- Digestive Acid
-            26476, -- Mind Flay
         },
     },
 
@@ -277,7 +325,7 @@ local debuffs = {
             28785, -- Locust Swarm
         },
         [901553] = { -- Grand Widow Faerlina
-            28798, -- Poison Bolt Volley
+            28796, -- Poison Bolt Volley
         },
         [901554] = { -- Maexxna
             28622, -- Web Wrap
@@ -292,10 +340,10 @@ local debuffs = {
         },
         [901557] = { -- Loatheb
             29185, -- Corrupted Mind
-            29234, -- Inevitable Doom
+            29204, -- Inevitable Doom
         },
         [901558] = { -- Instructor Razuvious
-            28732, -- Unbalancing Strike
+            55470, -- Unbalancing Strike
         },
         [901559] = { -- Gothik the Harvester
             27825, -- Shadow Mark
@@ -314,8 +362,8 @@ local debuffs = {
         --! carries 1562 and no button with id 15562 exists anywhere in the UI, so
         --! this whole block was unreachable and the Grobbulus button was empty.
         [901562] = { -- Grobbulus
-            28158, -- Mutating Injection
-            28169, -- Mutating Injection (Fallout)
+            28158, -- Poison
+            28169, -- Mutating Injection
         },
         [901563] = { -- Gluth
             29306, -- Infected Wound
@@ -338,6 +386,12 @@ local debuffs = {
 
     [63] = { -- 死亡矿井
         ["general"] = {
+            6304, -- Rhahk'Zor Slam
+            12097, -- Pierce Armor
+            7399, -- Terrify
+            6713, -- Disarm
+            5213, -- Molten Metal
+            5208, -- Poisoned Harpoon
         },
         [89] = { -- 格拉布托克
             87859, -- Fists of Flame
@@ -359,6 +413,9 @@ local debuffs = {
 
     [64] = { -- 影牙城堡
         ["general"] = {
+            7068, -- Veil of Shadow
+            7125, -- Toxic Saliva
+            7621, -- Arugal's Curse
         },
         [96] = { -- 灰葬男爵
         },
@@ -473,19 +530,19 @@ local debuffs = {
 
     [230] = { -- 厄运之槌
         ["general"] = {
+            17228, -- Shadow Bolt Volley
+            5568, -- Trample
         },
         [402] = { -- 瑟雷姆·刺蹄
             22651, -- Sacrifice
             22478, -- Intense Pain
-            17228, -- Shadow Bolt Volley
         },
         [403] = { -- 海多斯博恩
             17207, -- Whirlwind
         },
         [404] = { -- 蕾瑟塔蒂丝
-            13338, -- Curse of Thorns
-            16247, -- Curse of Tongues
-            17228, -- Shadow Bolt Volley
+            13338, -- Curse of Tongues
+            16247, -- Curse of Thorns
         },
         [405] = { -- 荒野变形者奥兹恩
             22661, -- Enervate
@@ -495,7 +552,6 @@ local debuffs = {
             22689, -- Mangle
         },
         [406] = { -- 特迪斯·扭木
-            5568, -- Trample
             22924, -- Grasping Vines
             22994, -- Entangle
         },
@@ -509,7 +565,6 @@ local debuffs = {
             22917, -- Shadowform
         },
         [409] = { -- 伊莫塔尔
-            5568, -- Trample
             22899, -- Eye of Immol'thar
         },
         [410] = { -- 托塞德林王子
@@ -520,8 +575,8 @@ local debuffs = {
             14516, -- Strike
         },
         [412] = { -- 践踏者克雷格
-            15578, -- Whirlwind
-            16740, -- War Stomp
+            "15578", -- Whirlwind
+            "16740", -- War Stomp
             22833, -- Booze Spit
         },
         [413] = { -- 卫兵芬古斯
@@ -557,6 +612,8 @@ local debuffs = {
 
     [232] = { -- 玛拉顿
         ["general"] = {
+            7964, -- Smoke Bomb
+            21869, -- Repulsive Gaze
         },
         [423] = { -- 诺克赛恩
         },
@@ -578,6 +635,10 @@ local debuffs = {
 
     [233] = { -- 剃刀高地
         ["general"] = {
+            12255, -- Curse of Tuten'kash
+            12252, -- Web Spray
+            12946, -- Putrid Stench
+            7645, -- Dominate Mind
         },
         [433] = { -- 火眼莫德雷斯
         },
@@ -593,6 +654,7 @@ local debuffs = {
 
     [234] = { -- 剃刀沼泽
         ["general"] = {
+            14515, -- Dominate Mind
         },
         [895] = { -- 鲁古格
         },
@@ -601,7 +663,7 @@ local debuffs = {
         [899] = { -- 督军拉姆塔斯
         },
         [900] = { -- 盲眼猎手格罗亚特
-            32065, -- Grievous Wound
+            31956, -- Grievous Wound
         },
         [901] = { -- 卡尔加·刺肋
         },
@@ -609,6 +671,12 @@ local debuffs = {
 
     [236] = { -- 斯坦索姆
         ["general"] = {
+            12734, -- Ground Smash
+            17293, -- Burning Winds
+            17307, -- Knockout
+            10887, -- Crowd Pummel
+            14099, -- Mighty Blow
+            16791, -- Furious Anger
         },
         [443] = { -- 弗雷斯特恩
             16798, -- Enchanting Lullaby
@@ -619,9 +687,6 @@ local debuffs = {
             8599, -- Enrage
         },
         [446] = { -- 希望破坏者威利
-            10887, -- Crowd Pummel
-            14099, -- Mighty Blow
-            16791, -- Furious Anger
         },
         [448] = { -- 档案管理员加尔福特
         },
@@ -645,9 +710,6 @@ local debuffs = {
             17620, -- Drain Life
         },
         [454] = { -- 巴瑟拉斯镇长
-            10887, -- Crowd Pummel
-            14099, -- Mighty Blow
-            16791, -- Furious Anger
         },
         [455] = { -- 吞咽者拉姆斯登
         },
@@ -659,6 +721,12 @@ local debuffs = {
 
     [237] = { -- 阿塔哈卡神庙
         ["general"] = {
+            12889, -- Curse of Tongues
+            12888, -- Cause Insanity
+            12479, -- Hex of Jammal'an
+            12493, -- Curse of Weakness
+            12890, -- Deep Slumber
+            24375, -- War Stomp
         },
         [457] = { -- 哈卡的化身
         },
@@ -683,6 +751,8 @@ local debuffs = {
 
     [239] = { -- 奥达曼
         ["general"] = {
+            3356, -- Flame Lash
+            6524, -- Ground Tremor
         },
         [467] = { -- 鲁维罗什
         },
@@ -704,6 +774,10 @@ local debuffs = {
 
     [240] = { -- 哀嚎洞穴
         ["general"] = {
+            8040, -- Druid's Slumber
+            8142, -- Grasping Vines
+            7967, -- Naralex's Nightmare
+            8150, -- Thundercrack
         },
         [474] = { -- 安娜科德拉
         },
@@ -771,6 +845,11 @@ local debuffs = {
 
     [316] = { -- 血色修道院
         ["general"] = {
+            9034, -- Immolate
+            8814, -- Flame Spike
+            8988, -- Silence
+            9256, -- Deep Sleep
+            8282, -- Curse of Blood
         },
         [671] = { -- 科洛夫修士
         },

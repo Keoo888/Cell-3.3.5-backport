@@ -43,6 +43,8 @@ local UnitGUID = UnitGUID
 --! reads it, which compiles to a global lookup on every health update for every
 --! unit. One file-scope alias at the top covers both call sites.
 local min = math.min
+--! WotLK perf: same reasoning as `min` - needed by the health clamp below.
+local max = math.max
 --! WotLK perf: same reasoning as `min` above. `abs` is also a real global on 3.3.5
 --! (codex: API function, alias of math.abs), and UnitButton_UpdateHealth already
 --! called it bare on the flash path - one file-scope alias covers both that call and
@@ -558,8 +560,11 @@ local function HandleIndicators(b)
             indicator:ShowAnimation(t["showAnimation"])
         end
         --! custom: update jump animation (see SESSION_NOTES #20)
-        if type(t["showJump"]) == "boolean" and indicator.ShowJump then
-            indicator:ShowJump(t["showJump"])
+        --! nil means enabled, so it must be applied as true rather than skipped:
+        --! HandleIndicators reuses the same frames across layouts, and a skip left
+        --! the previous layout's "off" stuck on an indicator that has no key yet.
+        if indicator.ShowJump then
+            indicator:ShowJump(t["showJump"] ~= false)
         end
         -- update duration
         if type(t["showDuration"]) == "boolean" or type(t["showDuration"]) == "number" then
@@ -720,7 +725,12 @@ hooksecurefunc(updater, "Show", function()
     CellLoadingBar.total = F.Getn(queue)
     CellLoadingBar.current = 0
     CellLoadingBar:SetMinMaxValues(0, CellLoadingBar.total)
-    CellLoadingBar:SetValue(0)
+    --! WotLK fix: 0.0001, not 0. At exactly the minimum 3.3.5 leaves the fill
+    --! texture's rect where it was instead of collapsing it, so the bar opened
+    --! showing however far the PREVIOUS load had got - a full green line on the
+    --! options frame for the frames before the first button was processed. This is
+    --! the display value only; `current` above stays the real counter.
+    CellLoadingBar:SetValue(0.0001)
     CellLoadingBar:Show()
 end)
 
@@ -2151,7 +2161,11 @@ local function UnitButton_UpdateHealthStates(self, diff)
 
     local health = UnitHealth(unit) + (diff or 0)
     local healthMax = UnitHealthMax(unit)
-    health = min(health, healthMax) --! diff
+    --! WotLK fix: clamp from BOTH sides. `diff` comes from the health-smoothing and
+    --! CLEU paths and can be negative, so health could end up below zero: the bar
+    --! then draws with a negative percentage and states.isDead (== 0) never trips,
+    --! leaving a "living" unit at an empty bar. The upper bound was already here.
+    health = max(0, min(health, healthMax))
 
     states.health = health
     states.healthMax = healthMax
@@ -2869,6 +2883,16 @@ if HealComm then
 end
 
 UnitButton_UpdateAuras = function(self)
+    --! WotLK perf: single clearing point for the deferred UNIT_AURA flag (see the
+    --! UNIT_AURA branch of UnitButton_UnitEvent and the flush in UnitButton_OnUpdate).
+    --! Clearing it here, rather than at the flush, means every other caller - the ~25
+    --! direct call sites and UnitButton_UpdateAll - also cancels a scan that is still
+    --! pending: they have just done that work synchronously. It is cleared above the
+    --! early returns on purpose, so a flag raised while the button has no indicators
+    --! yet does not survive to fire later; that state is already covered by
+    --! _updateRequired, which OnShow sets and which ends in a full update.
+    self._auraUpdateRequired = nil
+
     if not self._indicatorsReady then return end
 
     local unit = self.states.displayedUnit
@@ -3457,7 +3481,13 @@ UnitButton_UpdateShieldAbsorbs = function(self, statesReady)
     local widgets = self.widgets
 
     local totalAbsorbs = states.totalAbsorbs
-    if totalAbsorbs > 0 then
+    --! WotLK fix: healthMax has to be positive, not just totalAbsorbs. UnitHealthMax
+    --! answers 0 while a unit is still loading (just joined the group, just entered
+    --! the zone, out of range on arrival), and Lua 5.1 does not raise on x/0 - it
+    --! returns inf, which SetValue happily draws as a full-width bar. So a shielded
+    --! ally flashed a full shield across the frame for the frames before his max
+    --! health arrived. Same reason the heal-prediction path bails on healthMax <= 0.
+    if totalAbsorbs > 0 and states.healthMax > 0 then
         local healthMax = states.healthMax
         local shieldPercent = totalAbsorbs / healthMax
 
@@ -4283,7 +4313,24 @@ local function UnitButton_UnitEvent(self, event, unit)
         end
 
     elseif event == "UNIT_AURA" then
-        UnitButton_UpdateAuras(self)
+        --! WotLK perf: coalesced to one scan per frame instead of one per event.
+        --! UNIT_AURA is the loudest unit event this addon listens to - every tick of
+        --! every HoT, every stack of every raid debuff, on 40 units - and a single
+        --! scan is not cheap: UnitButton_UpdateAuras walks the full buff and debuff
+        --! lists of the unit and re-runs every custom indicator over them. The server
+        --! regularly sends several for the same unit inside one frame (an AoE heal
+        --! landing its HoT plus a refresh, a boss applying two auras at once), and
+        --! each of those used to pay for the whole walk while only the last result
+        --! could ever reach the screen: events are handled between paints, so nothing
+        --! drawn by an earlier scan of the same frame is visible. Raising a flag and
+        --! flushing it once in OnUpdate therefore costs no visible latency and
+        --! collapses N walks into one.
+        --! Safe because the flag can only be raised on a button that will flush it:
+        --! unit events reach a button only while __unitEventsOn is set, which happens
+        --! solely in UnitButton_RegisterEvents <- UnitButton_OnShow, and every button
+        --! CellUnitButton_OnLoad builds carries UnitButton_OnUpdate, which runs for as
+        --! long as the button is shown. OnHide leaves the index and clears the flag.
+        self._auraUpdateRequired = true
 
     elseif event == "UNIT_POWER" or event == "UNIT_MANA" or event == "UNIT_RAGE" or event == "UNIT_FOCUS" or event == "UNIT_ENERGY" or event == "UNIT_RUNIC_POWER" then
         --! WotLK perf: this is what CheckPowerEventRegistration used to say by
@@ -4645,6 +4692,10 @@ local function UnitButton_OnHide(self)
     end
     self.__displayedGuid = nil
     self._updateRequired = nil
+    --! WotLK perf: a UNIT_AURA that arrived just before the button hid must not
+    --! survive as a pending scan - OnShow queues a full update anyway, which ends in
+    --! UnitButton_UpdateAuras.
+    self._auraUpdateRequired = nil
     F.RemoveElementsExceptKeys(self.states, "unit", "displayedUnit")
 end
 
@@ -4853,6 +4904,14 @@ local function UnitButton_OnUpdate(self, elapsed)
         UnitButton_UpdateCombatIcon(self)
     end
     self.__updateElapsed = e
+
+    --! WotLK perf: the flush for the coalesced UNIT_AURA flag. Deliberately below the
+    --! tick: OnTick is where a pending _updateRequired turns into UnitButton_UpdateAll,
+    --! whose last line is UnitButton_UpdateAuras, and that clears the flag - so a frame
+    --! carrying both a full update and pending auras scans the auras once, not twice.
+    if self._auraUpdateRequired then
+        UnitButton_UpdateAuras(self)
+    end
 end
 
 -------------------------------------------------

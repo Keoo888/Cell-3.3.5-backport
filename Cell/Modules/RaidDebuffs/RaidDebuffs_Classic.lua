@@ -33,6 +33,53 @@ local instanceButtons, bossButtons, debuffButtons = {}, {}, {}
 -- used to sort list buttons
 local encounterJournalList = F.GetExpansionData()
 
+--! WotLK fix: display order of the instance list. Every list button used to be anchored
+--! by its index in the data table, so the left column showed the raids in progression
+--! order (Vault of Archavon, Naxxramas, ...) while the dungeons below them were already
+--! alphabetical. Sort the DISPLAY only, in two groups - raids first, then dungeons, each
+--! by the name the player actually sees, i.e. the string from the localized payload. The
+--! data index keeps travelling inside the button id, because ShowBosses and
+--! OpenInstanceBoss address entries by that index. Cached per expansion: the names cannot
+--! change during a session.
+local instanceDisplayOrder = {} -- [expansionName] = {dataIndex, ...}, in display order
+local instanceDisplayPos = {}   -- [expansionName] = {[dataIndex] = displayRow}
+
+--! WotLK fix: ExpansionData carries no raid/dungeon flag, and adding one would mean
+--! editing every localized payload. Encounter Journal ids answer instead: the raids of
+--! the three supported expansions occupy 741-761, Classic Naxxramas-40 carries the
+--! synthetic id 900745, and every dungeon is numbered below 320. Checked against all 74
+--! entries - this test and the raids-first grouping of the data agree exactly.
+local function IsRaidInstance(iId)
+    return (iId >= 741 and iId <= 761) or iId == 900745
+end
+
+local function GetInstanceDisplayOrder(eName)
+    if instanceDisplayOrder[eName] then
+        return instanceDisplayOrder[eName]
+    end
+
+    local data = encounterJournalList[eName]
+    local order, pos = {}, {}
+
+    for i = 1, #data do
+        order[i] = i
+    end
+
+    table.sort(order, function(a, b)
+        local raidA, raidB = IsRaidInstance(data[a]["id"]), IsRaidInstance(data[b]["id"])
+        if raidA ~= raidB then return raidA end
+        return data[a]["name"] < data[b]["name"]
+    end)
+
+    for p, i in ipairs(order) do
+        pos[i] = p
+    end
+
+    instanceDisplayOrder[eName] = order
+    instanceDisplayPos[eName] = pos
+    return order
+end
+
 -- used to GetInstanceInfo/GetRealZoneText --> instanceId
 local instanceNameMapping = {
     -- [instanceName] = expansionName:instanceIndex:instanceId,
@@ -316,15 +363,21 @@ local function OpenInstanceBoss(instanceName, bossName)
     local eName, iIndex, iId = F.SplitToNumber(":", resolved)
     expansionDropdown:SetSelected(eName)
     LoadExpansion(eName)
+    --! WotLK fix: the instance list is sorted for display, so the data index carried by
+    --! instanceNameMapping is no longer the row number. Translate it before touching a
+    --! button or the scroll offset, otherwise this button opens the wrong instance. The
+    --! call also builds the order when the expansion was already loaded.
+    GetInstanceDisplayOrder(eName)
+    local iPos = instanceDisplayPos[eName][iIndex] or iIndex
     if loadedInstance == iId and not bossName then
         -- current instance already shown, but instance debuffs updated, force refresh
-        ShowBosses(instanceButtons[iIndex].id, true)
+        ShowBosses(instanceButtons[iPos].id, true)
     else
-        instanceButtons[iIndex]:Click()
+        instanceButtons[iPos]:Click()
     end
     -- scroll
-    if iIndex > 9 then
-        RaidDebuffsTab_Instances.scrollFrame:SetVerticalScroll((iIndex-9)*19)
+    if iPos > 9 then
+        RaidDebuffsTab_Instances.scrollFrame:SetVerticalScroll((iPos-9)*19)
     end
 
     if bossName then
@@ -622,30 +675,37 @@ end
 ShowInstances = function(eName)
     instancesFrame.scrollFrame:ResetScroll()
 
-    for i, iTable in pairs(encounterJournalList[eName]) do
-        if not instanceButtons[i] then
-            instanceButtons[i] = Cell.CreateButton(instancesFrame.scrollFrame.content, iTable["name"], "transparent-accent", {20, 20})
+    --! WotLK fix: walk the sorted display order. iTable is still fetched by data index,
+    --! and that index - not the row number - is what goes into the button id.
+    local data = encounterJournalList[eName]
+    local order = GetInstanceDisplayOrder(eName)
+
+    for p, i in ipairs(order) do
+        local iTable = data[i]
+
+        if not instanceButtons[p] then
+            instanceButtons[p] = Cell.CreateButton(instancesFrame.scrollFrame.content, iTable["name"], "transparent-accent", {20, 20})
         else
-            instanceButtons[i]:SetText(iTable["name"])
-            instanceButtons[i]:Show()
+            instanceButtons[p]:SetText(iTable["name"])
+            instanceButtons[p]:Show()
         end
 
-        instanceButtons[i].id = iTable["id"].."-"..i -- send instanceId-instanceIndex to ShowBosses
+        instanceButtons[p].id = iTable["id"].."-"..i -- send instanceId-instanceIndex to ShowBosses
 
         -- open encounter journal
-        -- instanceButtons[i]:SetScript("OnDoubleClick", function()
+        -- instanceButtons[p]:SetScript("OnDoubleClick", function()
         --     OpenEncounterJournal(iTable["id"])
         -- end)
 
-        if i == 1 then
-            instanceButtons[i]:SetPoint("TOPLEFT")
+        if p == 1 then
+            instanceButtons[p]:SetPoint("TOPLEFT")
         else
-            instanceButtons[i]:SetPoint("TOPLEFT", instanceButtons[i-1], "BOTTOMLEFT", 0, 1)
+            instanceButtons[p]:SetPoint("TOPLEFT", instanceButtons[p-1], "BOTTOMLEFT", 0, 1)
         end
-        instanceButtons[i]:SetPoint("RIGHT")
+        instanceButtons[p]:SetPoint("RIGHT")
     end
 
-    local n = #encounterJournalList[eName]
+    local n = #order
 
     -- update scrollFrame content height
     instancesFrame.scrollFrame:SetContentHeight(20, n, -1)

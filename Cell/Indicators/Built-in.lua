@@ -120,6 +120,15 @@ function I.Cooldowns_ShowAnimation(self, show)
     end
 end
 
+--! custom: group version of ShowJump for built-in aura groups, see SESSION_NOTES #20
+function I.Cooldowns_ShowJump(self, show)
+    for i = 1, #self do
+        if self[i].ShowJump then
+            self[i]:ShowJump(show)
+        end
+    end
+end
+
 function I.Cooldowns_UpdatePixelPerfect(self)
     P.Repoint(self)
     for i = 1, #self do
@@ -226,6 +235,7 @@ function I.CreateDefensiveCooldowns(parent)
     defensiveCooldowns.SetOrientation = I.Cooldowns_SetOrientation
     defensiveCooldowns.ShowDuration = I.Cooldowns_ShowDuration
     defensiveCooldowns.ShowAnimation = I.Cooldowns_ShowAnimation
+    defensiveCooldowns.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     defensiveCooldowns.SetupGlow = I.Glow_SetupForChildren
     defensiveCooldowns.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
@@ -251,6 +261,7 @@ function I.CreateExternalCooldowns(parent)
     externalCooldowns.SetOrientation = I.Cooldowns_SetOrientation
     externalCooldowns.ShowDuration = I.Cooldowns_ShowDuration
     externalCooldowns.ShowAnimation = I.Cooldowns_ShowAnimation
+    externalCooldowns.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     externalCooldowns.SetupGlow = I.Glow_SetupForChildren
     externalCooldowns.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
@@ -276,6 +287,7 @@ function I.CreateAllCooldowns(parent)
     allCooldowns.SetOrientation = I.Cooldowns_SetOrientation
     allCooldowns.ShowDuration = I.Cooldowns_ShowDuration
     allCooldowns.ShowAnimation = I.Cooldowns_ShowAnimation
+    allCooldowns.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     allCooldowns.SetupGlow = I.Glow_SetupForChildren
     allCooldowns.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
@@ -540,6 +552,7 @@ function I.CreateDebuffs(parent)
 
     debuffs.ShowDuration = I.Cooldowns_ShowDuration
     debuffs.ShowAnimation = I.Cooldowns_ShowAnimation
+    debuffs.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     debuffs.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
     debuffs.ShowTooltip = Debuffs_ShowTooltip
@@ -1041,6 +1054,7 @@ function I.CreateRaidDebuffs(parent)
     raidDebuffs.SetBorder = I.Cooldowns_SetBorder
     raidDebuffs.UpdateSize = I.Cooldowns_UpdateSize_WithSpacing
     raidDebuffs.ShowDuration = I.Cooldowns_ShowDuration
+    raidDebuffs.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     raidDebuffs.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
     raidDebuffs.SetFont = I.Cooldowns_SetFont
     raidDebuffs.ShowGlow = RaidDebuffs_ShowGlow
@@ -2504,6 +2518,7 @@ function I.CreateCrowdControls(parent)
     crowdControls.ShowDuration = I.Cooldowns_ShowDuration
     crowdControls.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
     crowdControls.SetFont = I.Cooldowns_SetFont
+    crowdControls.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
     crowdControls.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
     for i = 1, 3 do

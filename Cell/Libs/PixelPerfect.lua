@@ -185,9 +185,8 @@ local mfloor, mceil = math.floor, math.ceil
 --! CellParent:GetEffectiveScale() across the C boundary, GetNearestPixelSize, and inside it
 --! GetPixelToUIUnitFactor plus Round. On Lua 5.1 without a JIT those calls, not the
 --! arithmetic, are the price, so only the pixel-to-UI factor is cached and the rest is
---! inlined. The basis is still read every call and compared, so the cache invalidates itself
---! and no hook can go stale (UIParent scale, uiscale CVar, resolution change and
---! CellParent:SetScale in Appearance are all covered by that comparison alone).
+--! inlined. The basis is read every call, so anything that moves the effective scale
+--! invalidates the cache by itself; a resolution change does not - see the frame below.
 --! The expression is GetNearestPixelSize's own, kept character for character:
 --! Round((size * scale) / factor) * factor / scale, no minPixels clamp because P.Scale never
 --! passed one. Folding the two divisions into premultiplied constants was tried first and
@@ -195,6 +194,14 @@ local mfloor, mceil = math.floor, math.ceil
 --! probed size/scale pairs crossed a Round() boundary because of it - up to 1.33 UI units,
 --! i.e. a visibly misplaced border.
 local scaleBasis, scaleFactor = false, 1
+
+--! WotLK fix: with "Use UI Scale" on, a resolution change moves 768/height but not the
+--! effective scale, so the comparison above never sees it. Proof: GAP-143.
+local scaleEventFrame = CreateFrame("Frame")
+scaleEventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+scaleEventFrame:SetScript("OnEvent", function()
+    scaleBasis = false
+end)
 
 function P.Scale(desiredPixels)
     if desiredPixels == 0 then return 0 end
@@ -221,8 +228,8 @@ end
 local Scale = P.Scale
 
 --! WotLK perf: the stamp callers compare to decide whether geometry they stored earlier
---! still matches the screen. GetPixelToUIUnitFactor above is memoised for the session,
---! so the effective scale is the only variable Scale() has.
+--! still matches the screen. GetPixelToUIUnitFactor above is memoised until
+--! DISPLAY_SIZE_CHANGED, so the effective scale is the only variable Scale() has.
 function P.GetScale()
     return CellParent:GetEffectiveScale()
 end

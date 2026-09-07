@@ -377,6 +377,8 @@ Cell.defaults.layout = {
             ["size"] = {12, 20},
             ["showDuration"] = false,
             ["showAnimation"] = true,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
             ["num"] = 2,
             ["orientation"] = "right-to-left",
             ["font"] = {
@@ -395,6 +397,8 @@ Cell.defaults.layout = {
             ["size"] = {12, 20},
             ["showDuration"] = false,
             ["showAnimation"] = true,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
             ["num"] = 2,
             ["orientation"] = "left-to-right",
             ["font"] = {
@@ -413,6 +417,8 @@ Cell.defaults.layout = {
             ["size"] = {12, 20},
             ["showDuration"] = false,
             ["showAnimation"] = true,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
             ["num"] = 2,
             ["orientation"] = "left-to-right",
             ["font"] = {
@@ -451,6 +457,8 @@ Cell.defaults.layout = {
             ["size"] = {{13, 13}, {17, 17}},
             ["showDuration"] = false,
             ["showAnimation"] = true,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
             ["showTooltip"] = false,
             ["enableBlacklistShortcut"] = false,
             ["num"] = 3,
@@ -479,6 +487,8 @@ Cell.defaults.layout = {
             ["onlyShowTopGlow"] = false,
             ["orientation"] = "left-to-right",
             ["showTooltip"] = false,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
         }, -- 24
         {
             ["name"] = "Targeted Spells",
@@ -505,6 +515,8 @@ Cell.defaults.layout = {
             ["border"] = 2,
             ["num"] = 2,
             ["showDuration"] = false,
+            --! custom: jump (refresh) animation, on as before so nothing changes silently
+            ["showJump"] = true,
             ["font"] = {
                 {"Cell ".._G.DEFAULT, 11, "Outline", false, "TOPRIGHT", 2, 1, {1, 1, 1}},
                 {"Cell ".._G.DEFAULT, 11, "Outline", false, "BOTTOMRIGHT", 2, -1, {1, 1, 1}},

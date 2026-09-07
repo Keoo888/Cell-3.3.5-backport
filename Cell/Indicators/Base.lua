@@ -2250,7 +2250,15 @@ local function Overlay_OnUpdate(overlay, elapsed)
     local remain = overlay._duration - (GetTime() - overlay._start)
     if remain < 0 then remain = 0 end
     overlay._remain = remain
-    overlay:_SetValue(remain)
+    --! WotLK fix: at exactly the bar's minimum 3.3.5 leaves the fill texture's rect
+    --! where it was instead of collapsing it, so an aura whose duration ran out kept
+    --! a sliver of overlay across the health bar until Hide() came. A hair above the
+    --! minimum paints a zero-width rect at the left edge instead - same treatment as
+    --! healthBar/powerBar in UnitButton_Cata_Wrath.lua and as oUF does on this client
+    --! (reference/ElvUI-master .../oUF/elements/health.lua:165). `_remain` above keeps
+    --! the true zero: neither the colour thresholds below nor the readers of
+    --! `_remain` elsewhere may see the fudged value.
+    overlay:_SetValue(remain == 0 and 0.0001 or remain)
 
     local e = overlay._elapsed + elapsed
     if e >= 0.1 then
