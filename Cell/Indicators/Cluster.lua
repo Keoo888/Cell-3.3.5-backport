@@ -654,7 +654,10 @@ function I.EnableCluster(enabled)
         end
         --! Wipe first, then push: otherwise the last computed numbers would stay
         --! frozen on the frames after the indicator was switched off.
+        --! WotLK fix: every pool, not just the current group - a number left on a
+        --! party or separated-group button came back with that pool. Same shape as
+        --! I.EnableStatusIcon's disable branch.
         wipe(counts)
-        F.IterateAllUnitButtons(Apply, true)
+        F.IterateAllUnitButtons(Apply)
     end
 end

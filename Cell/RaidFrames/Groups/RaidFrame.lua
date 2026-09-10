@@ -409,7 +409,8 @@ end
 -- subgroup = nil    -> all subgroups enabled in layout["groupFilter"] (combined header)
 
 --! WotLK fix: the leader's main tank heads the tank block, the rest stay
---! alphabetical. GetPartyAssignment exists on 3.3.5a. Proof: GAP-143.
+--! alphabetical. The assignment is the 10th return of GetRaidRosterInfo -
+--! same source Blizzard_RaidUI.lua:410 reads. Proof: GAP-143.
 local mainTanks = {} -- name -> true, refilled on every call below
 local function MainTankFirst(a, b)
     local ma, mb = mainTanks[a], mainTanks[b]
@@ -430,7 +431,10 @@ local function BuildRoleSortedNameList(layout, subgroup)
     wipe(mainTanks)
     local buckets = {{}, {}, {}, {}} -- roleOrder slots 1-3, 4 = NONE/unknown
     for i = 1, total do
-        local name, _, sub = GetRaidRosterInfo(i)
+        --! WotLK perf: role comes with the roster row we already fetched, so the
+        --! per-member GetPartyAssignment C-call is gone (up to 40 per header,
+        --! and separated headers rebuild eight of them).
+        local name, _, sub, _, _, _, _, _, _, role = GetRaidRosterInfo(i)
         if name then
             local wanted
             if subgroup then
@@ -442,7 +446,7 @@ local function BuildRoleSortedNameList(layout, subgroup)
                 local unit = "raid"..i
                 local p = prio[Cell.UnitGroupRolesAssigned(unit)] or 4
                 tinsert(buckets[p], name)
-                if GetPartyAssignment("MAINTANK", unit) then
+                if role == "MAINTANK" then
                     mainTanks[name] = true
                 end
             end

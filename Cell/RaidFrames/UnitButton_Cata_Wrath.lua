@@ -307,6 +307,19 @@ local enabledIndicators = {}
 local indicatorNums, indicatorBooleans, indicatorColors, indicatorCustoms = {}, {}, {}, {}
 
 local function UpdateIndicatorParentVisibility(b, indicatorName, enabled)
+    --! WotLK fix: cluster/incomingHealers are value-driven - their own Apply shows
+    --! them - but nothing hid a disabled one, so a number drawn before the switch
+    --! stayed on the frame through every rebuild. Hide only, never show.
+    if indicatorName == "cluster" or indicatorName == "incomingHealers" then
+        if not enabled then
+            local indicator = b.indicators[indicatorName]
+            --! value/isMine are how IncomingHealers.Apply knows it is drawing.
+            indicator.value, indicator.isMine = nil, nil
+            indicator:Hide()
+        end
+        return
+    end
+
     if not (indicatorName == "debuffs" or
             --! WotLK fix: "privateAuras" из списка убран — такого индикатора в
             --! бэкпорте нет (приватные ауры появились только в ретейле).
@@ -2308,12 +2321,9 @@ ShouldShowPowerBar = function(b)
     if not (b:IsVisible() or b.isPreview) then return end
     if not b.powerSize or b.powerSize == 0 then return end
 
-    --! WotLK fix: the backport added a solo bypass here ("no role while
-    --! solo, always show power bar"), which made power filters do nothing
-    --! outside of a group. Upstream Cell has no such bypass: class-level
-    --! boolean filters (HUNTER/MAGE/WARLOCK/...) don't need a role at all,
-    --! and role-based ones already fall back to "show" below when the role
-    --! is unknown. Matches upstream UnitButton.lua ShouldShowPowerBar.
+    --! WotLK fix: dropped upstream Wrath-Classic's solo bypass here
+    --! (Cell.vars.groupType == "solo"), which killed power filters while solo:
+    --! class-boolean filters need no role, unknown role already shows below.
     if not b.states.guid then
         return true
     end
@@ -3749,6 +3759,25 @@ local function ScheduleDACheck()
     if daCheckScheduled then return end
     daCheckScheduled = true
     C_Timer.After(0.1, CheckPendingDA)
+end
+
+--! WotLK fix: diagnostic-only snapshot of the absorb tracker, same role as
+--! Cell.GetUnitRoleDebugInfo. absorbInfos is a file local, so a number that is
+--! wrong on screen cannot otherwise be traced back to the spell that wrote it.
+--! Builds a fresh table per call: never called from a per-frame path.
+function Cell.GetAbsorbDebugInfo(guid)
+    if not guid then return nil end
+    local info = { spells = {}, total = 0, count = 0,
+        glyphHeal = lastGlyphHeal[guid], pendingDA = pendingDA[guid] and true or false }
+    local t = absorbInfos[guid]
+    if t then
+        for spellName, amount in pairs(t) do
+            info.spells[spellName] = amount
+            info.total = info.total + amount
+            info.count = info.count + 1
+        end
+    end
+    return info
 end
 
 --! WotLK fix/perf: the old GetCLEU wrapper called the ClassicAPI

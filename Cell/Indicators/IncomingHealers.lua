@@ -320,8 +320,10 @@ function I.EnableIncomingHealers(enabled)
         end
         --! Bump the stamp first, then push: every GUID is now stale, so the same
         --! Apply that draws the numbers also clears them.
+        --! WotLK fix: every pool, not just the current group - a number left on a
+        --! party or separated-group button came back with that pool.
         stamp = stamp + 1
         hadPending = false
-        F.IterateAllUnitButtons(Apply, true)
+        F.IterateAllUnitButtons(Apply)
     end
 end

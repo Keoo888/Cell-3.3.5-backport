@@ -22,6 +22,9 @@ local IsInRaid = Cell.IsInRaid
 --! фреймрейте на каждом юните с аггро. Файловый локал убирает из каждого кадра
 --! GETGLOBAL math (хеш-лукап в _G) плюс хеш-лукап поля .sin.
 local sin = math.sin
+--! WotLK perf: same reason - floor runs from HealthText_SetValue, i.e. on every
+--! health update of every visible unit.
+local floor = math.floor
 
 local function noop() end
 
@@ -1630,6 +1633,12 @@ end
 
 local function HealthText_SetValue(self, health, maxHealth, shields, healAbsorbs)
     maxHealth = maxHealth == 0 and 1 or maxHealth
+
+    --! WotLK fix: absorb accrues in fractions - Divine Aegis takes 10/20/30% of a
+    --! heal, the PW:S glyph divides by 0.2 - and "%s" prints a double as %.14g, so
+    --! the player saw "3103.3333333333". Round once here: every shields/effective
+    --! format below is fed from this argument.
+    shields = floor(shields + 0.5)
 
     self.text:SetFormattedText("%s%s%s%s",
         self.GetHealth1(self.health1, self.health1_hideIfEmptyOrFull, health, maxHealth, shields, healAbsorbs),
