@@ -726,9 +726,17 @@ local function BorderIcon_SetCooldown(frame, start, duration, debuffType, textur
         r, g, b = 0, 0, 0
     end
 
-    if duration == 0 then
-        frame.border:Show()
+    --! WotLK fix: 3.3.5 has no SetSwipeColor, so the spiral cannot carry the debuff
+    --! color. Keep the border shown under a running cooldown - the Cooldown child
+    --! draws above the parent's texture layers, so the spiral drains over a colored
+    --! ring. SetTexture is memoized: this runs on every aura update.
+    frame.border:Show()
+    if r ~= frame._borderR or g ~= frame._borderG or b ~= frame._borderB then
+        frame._borderR, frame._borderG, frame._borderB = r, g, b
         frame.border:SetTexture(r, g, b)
+    end
+
+    if duration == 0 then
         frame.cooldown:Hide()
         frame.duration:Hide()
         frame:SetScript("OnUpdate", nil)
@@ -740,12 +748,7 @@ local function BorderIcon_SetCooldown(frame, start, duration, debuffType, textur
         frame._elapsedTime = nil
         frame._durationTextBlank = nil
     else
-        frame.border:Hide()
         frame.cooldown:Show()
-        --! WotLK fix: native 3.3.5 cannot recolor its cooldown spiral (SetSwipeColor
-        --! отсутствует, проверено codex). Debuff coloring живёт в явной отрисовке
-        --! рамки/иконки Cell, спираль остаётся нативной. Ретейл-ветка вырезана -
-        --! это горячий путь: ShowCooldown зовётся на каждое обновление аур.
         frame.cooldown:_SetCooldown(start, duration)
 
         if not frame.showDuration then

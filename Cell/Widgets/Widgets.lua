@@ -23,6 +23,16 @@ local IsMetaKeyDown = IsMetaKeyDown or function() return false end
 local P = Cell.pixelPerfectFuncs
 local LCG = LibStub("LibCustomGlow-1.0-Cell")
 
+--! WotLK fix: on 3.3.5a a child keeps the frame level it inherited at creation,
+--! so a widget built before its parent's level is raised ends up drawn behind the
+--! parent's own backdrop - visible for sliders, whose thumb and value text vanished.
+--! Pin every widget one level above its parent at creation, as the other 3.3.5 port does.
+local function RaiseAboveParent(frame, parent, offset)
+    if parent and parent.GetFrameLevel and frame and frame.SetFrameLevel then
+        frame:SetFrameLevel(parent:GetFrameLevel() + (offset or 1))
+    end
+end
+
 -----------------------------------------
 -- SOUNDKIT
 -----------------------------------------
@@ -400,6 +410,7 @@ function Cell.CreateTitledPane(parent, text, width, height, color)
     if not color then color = {["r"]=accentColor.t[1], ["g"]=accentColor.t[2], ["b"]=accentColor.t[3], ["a"]=0.777, ["s"]=accentColor.s} end
 
     local pane = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(pane, parent)
     P.Size(pane, width, height)
     -- Cell.StylizeFrame(pane, {0,1,0,0.1}, {0,0,0,0})
 
@@ -447,6 +458,7 @@ end
 
 function Cell.CreateFrame(name, parent, width, height, isTransparent, template)
     local f = CreateFrame("Frame", name, parent, template)
+    RaiseAboveParent(f, parent)
     f:Hide()
     if not isTransparent then Cell.StylizeFrame(f) end
     f:EnableMouse(true)
@@ -480,6 +492,7 @@ function Cell.CreateMovableFrame(title, name, width, height, frameStrata, frameL
 
     -- header
     local header = CreateFrame("Frame", nil, f)
+    RaiseAboveParent(header, f)
     f.header = header
     header:EnableMouse(true)
     header:SetClampedToScreen(true)
@@ -933,6 +946,7 @@ function Cell.CreateCheckButton(parent, label, onClick, ...)
     -- OptionsBaseCheckButtonTemplate -->  FrameXML\OptionsPanelTemplates.xml line 10
 
     local cb = CreateFrame("CheckButton", nil, parent)
+    RaiseAboveParent(cb, parent)
     cb.onClick = onClick
     cb:SetScript("OnClick", function(self)
         PlaySound(self:GetChecked() and SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_ON or SOUNDKIT.IG_MAINMENU_OPTION_CHECKBOX_OFF)
@@ -1016,6 +1030,7 @@ end
 -----------------------------------------
 function Cell.CreateColorPicker(parent, label, hasOpacity, onChange, onConfirm)
     local cp = CreateFrame("Button", nil, parent, nil)
+    RaiseAboveParent(cp, parent)
     cp.SetEnabled = Widget_SetEnabled
     P.Size(cp, 14, 14)
     cp:SetBackdrop({bgFile = Cell.vars.whiteTexture, edgeFile = Cell.vars.whiteTexture, edgeSize = P.Scale(1)})
@@ -1222,6 +1237,7 @@ end
 
 function Cell.CreateEditBox(parent, width, height, isTransparent, isMultiLine, isNumeric, fontObj)
     local eb = CreateFrame("EditBox", nil, parent, nil)
+    RaiseAboveParent(eb, parent)
     if not isTransparent then Cell.StylizeFrame(eb, {0.115, 0.115, 0.115, 0.9}) end
     -- Use font object directly, fallback to _G lookup for WotLK compatibility
     eb:SetFontObject(fontObj or _G[font_name])
@@ -1259,6 +1275,7 @@ function Cell.CreateScrollEditBox(parent, onTextChanged, scrollStep)
     scrollStep = scrollStep or 1
 
     local frame = CreateFrame("Frame", nil, parent)
+    RaiseAboveParent(frame, parent)
     Cell.CreateScrollFrame(frame)
     Cell.StylizeFrame(frame.scrollFrame, {0.15, 0.15, 0.15, 0.9})
 
@@ -1336,14 +1353,20 @@ end
 function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedFn, afterValueChangedFn, isPercentage, ...)
     local tooltips = {...}
     local slider = CreateFrame("Slider", nil, parent, nil)
+    RaiseAboveParent(slider, parent)
     slider.SetEnabled = Widget_SetEnabled
     --! WotLK fix: synthesize retail's userChanged contract only for this Cell
     --! slider; never replace the shared native Slider metatable.
+    --! Also refresh the value box here: the native OnValueChanged does not fire
+    --! when the value is unchanged, so relying on it alone left the box empty
+    --! until the first drag (AceGUI updates its text the same way, not by event).
+    local ShowCurrentValue
     local NativeSetValue = slider.SetValue
     function slider:SetValue(value)
         self._cellProgrammaticChange = true
         NativeSetValue(self, value)
         self._cellProgrammaticChange = nil
+        if ShowCurrentValue then ShowCurrentValue(self:GetValue()) end
     end
     slider:SetValueStep(step)
     if slider.SetObeyStepOnDrag then
@@ -1388,8 +1411,20 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
         end
     end)
     currentEditBox:SetScript("OnShow", function(self)
-        if self.oldValue then self:SetText(self.oldValue) end
+        if self.oldValue then ShowCurrentValue(self.oldValue) end
     end)
+
+    ShowCurrentValue = function(value)
+        if math.floor(value) < value then -- decimal
+            value = tonumber(string.format("%.2f", value))
+        end
+        --! WotLK fix: SetText with the string already in the box does not re-lay out the
+        --! text, so a value written while the pane was hidden stays invisible until the
+        --! string changes. Clear first to force a fresh layout on every write.
+        currentEditBox:SetText("")
+        currentEditBox:SetText(value)
+        currentEditBox.oldValue = value
+    end
 
     local lowText = slider:CreateFontString(nil, "OVERLAY", font_name)
     slider.lowText = lowText
@@ -1442,8 +1477,7 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
             value = tonumber(string.format("%.2f", value))
         end
 
-        currentEditBox:SetText(value)
-        currentEditBox.oldValue = value
+        ShowCurrentValue(value)
         if userChanged and slider.onValueChangedFn then slider.onValueChangedFn(value) end
     end)
 
@@ -1519,6 +1553,9 @@ function Cell.CreateSlider(name, parent, low, high, width, step, onValueChangedF
         slider.high = maxV
         lowText:SetText(minV..unit)
         highText:SetText(maxV..unit)
+        --! WotLK fix: a new range clamps the current value silently, so refresh
+        --! the box here too (FrameXML wires OnMinMaxChanged for the same reason).
+        ShowCurrentValue(slider:GetValue())
     end
     slider:UpdateMinMaxValues(low, high)
 
@@ -1530,6 +1567,7 @@ end
 -----------------------------------------
 function Cell.CreateSwitch(parent, size, leftText, leftValue, rightText, rightValue, func)
     local switch = CreateFrame("Frame", nil, parent, nil)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
     --! WotLK fix: a bare Frame gets no mouse input until EnableMouse(true), so the three
@@ -1632,6 +1670,7 @@ end
 
 function Cell.CreateTripleSwitch(parent, size, func)
     local switch = CreateFrame("Frame", nil, parent, nil)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
 
@@ -1725,6 +1764,7 @@ end
 
 function Cell.CreateFourfoldSwitch(parent, size, func)
     local switch = CreateFrame("Frame", nil, parent, nil)
+    RaiseAboveParent(switch, parent)
     P.Size(switch, size[1], size[2])
     Cell.StylizeFrame(switch, {0.115, 0.115, 0.115, 1})
 
@@ -1816,6 +1856,7 @@ end
 -----------------------------------------
 function Cell.CreateStatusBar(name, parent, width, height, maxValue, smooth, func, showText, texture, color)
     local bar = CreateFrame("StatusBar", name, parent, nil)
+    RaiseAboveParent(bar, parent)
 
     if not color then color = {accentColor.t[1], accentColor.t[2], accentColor.t[3], 1} end
     if not texture then texture = Cell.vars.whiteTexture end
@@ -2876,6 +2917,7 @@ end
 function Cell.CreateScrollFrame(parent, top, bottom, color, border)
     -- create scrollFrame & scrollbar seperately (instead of UIPanelScrollFrameTemplate), in order to custom it
     local scrollFrame = CreateFrame("ScrollFrame", parent:GetName() and parent:GetName().."ScrollFrame" or nil, parent, nil)
+    RaiseAboveParent(scrollFrame, parent)
     parent.scrollFrame = scrollFrame
     top = top or 0
     bottom = bottom or 0
@@ -2895,6 +2937,7 @@ function Cell.CreateScrollFrame(parent, top, bottom, color, border)
 
     -- content
     local content = CreateFrame("Frame", nil, scrollFrame, nil)
+    RaiseAboveParent(content, scrollFrame)
     content:SetSize(scrollFrame:GetWidth(), 2)
     scrollFrame:SetScrollChild(content)
     scrollFrame.content = content
@@ -2902,6 +2945,7 @@ function Cell.CreateScrollFrame(parent, top, bottom, color, border)
 
     -- scrollbar
     local scrollbar = CreateFrame("Frame", nil, scrollFrame, nil)
+    RaiseAboveParent(scrollbar, scrollFrame, 2)
     scrollbar:SetPoint("TOPLEFT", scrollFrame, "TOPRIGHT", 2, 0)
     scrollbar:SetPoint("BOTTOMRIGHT", scrollFrame, 7, 0)
     scrollbar:Hide()
@@ -2910,6 +2954,7 @@ function Cell.CreateScrollFrame(parent, top, bottom, color, border)
 
     -- scrollbar thumb
     local scrollThumb = CreateFrame("Frame", nil, scrollbar, nil)
+    RaiseAboveParent(scrollThumb, scrollbar)
     scrollThumb:SetWidth(5) -- scrollbar's width is 5
     scrollThumb:SetHeight(scrollbar:GetHeight())
     scrollThumb:SetPoint("TOP")
@@ -3167,6 +3212,7 @@ end
 
 function Cell.CreateDropdown(parent, width, dropdownType, isMini, isHorizontal)
     local menu = CreateFrame("Frame", nil, parent, nil)
+    RaiseAboveParent(menu, parent)
     P.Size(menu, width, 20)
     menu:EnableMouse(true)
     -- menu:SetFrameLevel(5)

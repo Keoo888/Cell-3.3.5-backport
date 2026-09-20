@@ -107,7 +107,7 @@ Cell_ExpansionData.data = {
     ["Classic"] = {
         {
             ["id"] = 741,
-            ["image"] = 1396586,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-MoltenCore",
             ["name"] = "Molten Core",
             ["bosses"] = {
                 {
@@ -164,7 +164,7 @@ Cell_ExpansionData.data = {
         }, -- [1]
         {
             ["id"] = 742,
-            ["image"] = 1396580,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-BlackwingLair",
             ["name"] = "Blackwing Lair",
             ["bosses"] = {
                 {
@@ -211,7 +211,7 @@ Cell_ExpansionData.data = {
         }, -- [2]
         {
             ["id"] = 743,
-            ["image"] = 1396591,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-RuinsofAhnQiraj",
             ["name"] = "Ruins of Ahn'Qiraj",
             ["bosses"] = {
                 {
@@ -248,7 +248,7 @@ Cell_ExpansionData.data = {
         }, -- [3]
         {
             ["id"] = 744,
-            ["image"] = 1396593,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TempleofAhnQiraj",
             ["name"] = "Temple of Ahn'Qiraj",
             ["bosses"] = {
                 {
@@ -312,7 +312,7 @@ Cell_ExpansionData.data = {
         --! ExpansionData_*.lua; TBC-шный Каражан не тронут.
         {
             ["id"] = 900745,
-            ["image"] = 1396587,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Naxxramas",
             ["name"] = "Naxxramas (40)",
             ["bosses"] = {
                 {
@@ -394,7 +394,7 @@ Cell_ExpansionData.data = {
         }, -- [5]
         {
             ["id"] = 227,
-            ["image"] = 608195,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-BlackfathomDeeps",
             ["name"] = "Blackfathom Deeps",
             ["bosses"] = {
                 {
@@ -441,7 +441,7 @@ Cell_ExpansionData.data = {
         }, -- [6]
         {
             ["id"] = 228,
-            ["image"] = 608196,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-BlackrockDepths",
             ["name"] = "Blackrock Depths",
             ["bosses"] = {
                 {
@@ -538,7 +538,7 @@ Cell_ExpansionData.data = {
         }, -- [7]
         {
             ["id"] = 63,
-            ["image"] = 522352,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Deadmines",
             ["name"] = "Deadmines",
             ["bosses"] = {
                 {
@@ -575,7 +575,7 @@ Cell_ExpansionData.data = {
         }, -- [8]
         {
             ["id"] = 230,
-            ["image"] = 608200,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-DireMaul",
             ["name"] = "Dire Maul",
             ["bosses"] = {
                 {
@@ -662,7 +662,7 @@ Cell_ExpansionData.data = {
         }, -- [9]
         {
             ["id"] = 231,
-            ["image"] = 608202,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Gnomeregan",
             ["name"] = "Gnomeregan",
             ["bosses"] = {
                 {
@@ -694,7 +694,7 @@ Cell_ExpansionData.data = {
         }, -- [10]
         {
             ["id"] = 229,
-            ["image"] = 608197,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-BlackrockSpire",
             ["name"] = "Lower Blackrock Spire",
             ["bosses"] = {
                 {
@@ -746,7 +746,7 @@ Cell_ExpansionData.data = {
         }, -- [11]
         {
             ["id"] = 232,
-            ["image"] = 608209,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Maraudon",
             ["name"] = "Maraudon",
             ["bosses"] = {
                 {
@@ -793,7 +793,7 @@ Cell_ExpansionData.data = {
         }, -- [12]
         {
             ["id"] = 226,
-            ["image"] = 608211,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-RagefireChasm",
             ["name"] = "Ragefire Chasm",
             ["bosses"] = {
                 {
@@ -820,7 +820,7 @@ Cell_ExpansionData.data = {
         }, -- [13]
         {
             ["id"] = 233,
-            ["image"] = 608212,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-RazorfenDowns",
             ["name"] = "Razorfen Downs",
             ["bosses"] = {
                 {
@@ -852,7 +852,7 @@ Cell_ExpansionData.data = {
         }, -- [14]
         {
             ["id"] = 234,
-            ["image"] = 608213,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-RazorfenKraul",
             ["name"] = "Razorfen Kraul",
             ["bosses"] = {
                 {
@@ -884,7 +884,7 @@ Cell_ExpansionData.data = {
         }, -- [15]
         {
             ["id"] = 311,
-            ["image"] = 643262,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-ScarletHalls",
             ["name"] = "Scarlet Halls",
             ["bosses"] = {
                 {
@@ -906,7 +906,7 @@ Cell_ExpansionData.data = {
         }, -- [16]
         {
             ["id"] = 316,
-            ["image"] = 608214,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-ScarletMonastery",
             ["name"] = "Scarlet Monastery",
             ["bosses"] = {
                 {
@@ -928,7 +928,7 @@ Cell_ExpansionData.data = {
         }, -- [17]
         {
             ["id"] = 246,
-            ["image"] = 608215,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Scholomance",
             ["name"] = "Scholomance",
             ["bosses"] = {
                 {
@@ -960,7 +960,7 @@ Cell_ExpansionData.data = {
         }, -- [18]
         {
             ["id"] = 64,
-            ["image"] = 522358,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-ShadowFangKeep",
             ["name"] = "Shadowfang Keep",
             ["bosses"] = {
                 {
@@ -992,7 +992,7 @@ Cell_ExpansionData.data = {
         }, -- [19]
         {
             ["id"] = 236,
-            ["image"] = 608216,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Stratholme",
             ["name"] = "Stratholme",
             ["bosses"] = {
                 {
@@ -1064,7 +1064,7 @@ Cell_ExpansionData.data = {
         }, -- [20]
         {
             ["id"] = 238,
-            ["image"] = 608223,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TheStockade",
             ["name"] = "The Stockade",
             ["bosses"] = {
                 {
@@ -1086,7 +1086,7 @@ Cell_ExpansionData.data = {
         }, -- [21]
         {
             ["id"] = 237,
-            ["image"] = 608217,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-SunkenTemple",
             ["name"] = "The Temple of Atal'hakkar",
             ["bosses"] = {
                 {
@@ -1113,7 +1113,7 @@ Cell_ExpansionData.data = {
         }, -- [22]
         {
             ["id"] = 239,
-            ["image"] = 608225,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Uldaman",
             ["name"] = "Uldaman",
             ["bosses"] = {
                 {
@@ -1160,7 +1160,7 @@ Cell_ExpansionData.data = {
         }, -- [23]
         {
             ["id"] = 240,
-            ["image"] = 608229,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-WailingCaverns",
             ["name"] = "Wailing Caverns",
             ["bosses"] = {
                 {
@@ -1207,7 +1207,7 @@ Cell_ExpansionData.data = {
         }, -- [24]
         {
             ["id"] = 241,
-            ["image"] = 608230,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-ZulFarrak",
             ["name"] = "Zul'Farrak",
             ["bosses"] = {
                 {
@@ -1246,7 +1246,7 @@ Cell_ExpansionData.data = {
     ["Burning Crusade"] = {
         {
             ["id"] = 745,
-            ["image"] = 1396584,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Karazhan",
             ["name"] = "Karazhan",
             ["bosses"] = {
                 {
@@ -1308,7 +1308,7 @@ Cell_ExpansionData.data = {
         }, -- [1]
         {
             ["id"] = 746,
-            ["image"] = 1396582,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-GruulsLair",
             ["name"] = "Gruul's Lair",
             ["bosses"] = {
                 {
@@ -1325,7 +1325,7 @@ Cell_ExpansionData.data = {
         }, -- [2]
         {
             ["id"] = 747,
-            ["image"] = 1396585,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-MagtheridonsLair",
             ["name"] = "Magtheridon's Lair",
             ["bosses"] = {
                 {
@@ -1337,7 +1337,7 @@ Cell_ExpansionData.data = {
         }, -- [3]
         {
             ["id"] = 748,
-            ["image"] = 608199,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CoilfangReservoir",
             ["name"] = "Serpentshrine Cavern",
             ["bosses"] = {
                 {
@@ -1374,7 +1374,7 @@ Cell_ExpansionData.data = {
         }, -- [4]
         {
             ["id"] = 749,
-            ["image"] = 608218,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TempestKeep",
             ["name"] = "The Eye",
             ["bosses"] = {
                 {
@@ -1401,7 +1401,7 @@ Cell_ExpansionData.data = {
         }, -- [5]
         {
             ["id"] = 750,
-            ["image"] = 608198,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CavernsOfTime",
             ["name"] = "The Battle for Mount Hyjal",
             ["bosses"] = {
                 {
@@ -1433,7 +1433,7 @@ Cell_ExpansionData.data = {
         }, -- [6]
         {
             ["id"] = 751,
-            ["image"] = 1396579,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-BlackTemple",
             ["name"] = "Black Temple",
             ["bosses"] = {
                 {
@@ -1485,7 +1485,7 @@ Cell_ExpansionData.data = {
         }, -- [7]
         {
             ["id"] = 752,
-            ["image"] = 1396592,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-SunwellPlateau",
             ["name"] = "Sunwell Plateau",
             ["bosses"] = {
                 {
@@ -1522,7 +1522,7 @@ Cell_ExpansionData.data = {
         }, -- [8]
         {
             ["id"] = 247,
-            ["image"] = 608193,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Auchindoun",
             ["name"] = "Auchenai Crypts",
             ["bosses"] = {
                 {
@@ -1539,7 +1539,7 @@ Cell_ExpansionData.data = {
         }, -- [9]
         {
             ["id"] = 248,
-            ["image"] = 608207,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HellfireCitadel",
             ["name"] = "Hellfire Ramparts",
             ["bosses"] = {
                 {
@@ -1561,7 +1561,7 @@ Cell_ExpansionData.data = {
         }, -- [10]
         {
             ["id"] = 249,
-            ["image"] = 608208,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-MagistersTerrace",
             ["name"] = "Magisters' Terrace",
             ["bosses"] = {
                 {
@@ -1588,7 +1588,7 @@ Cell_ExpansionData.data = {
         }, -- [11]
         {
             ["id"] = 250,
-            ["image"] = 608193,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Auchindoun",
             ["name"] = "Mana-Tombs",
             ["bosses"] = {
                 {
@@ -1610,7 +1610,7 @@ Cell_ExpansionData.data = {
         }, -- [12]
         {
             ["id"] = 251,
-            ["image"] = 608198,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CavernsOfTime",
             ["name"] = "Old Hillsbrad Foothills",
             ["bosses"] = {
                 {
@@ -1632,7 +1632,7 @@ Cell_ExpansionData.data = {
         }, -- [13]
         {
             ["id"] = 252,
-            ["image"] = 608193,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Auchindoun",
             ["name"] = "Sethekk Halls",
             ["bosses"] = {
                 {
@@ -1649,7 +1649,7 @@ Cell_ExpansionData.data = {
         }, -- [14]
         {
             ["id"] = 253,
-            ["image"] = 608193,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Auchindoun",
             ["name"] = "Shadow Labyrinth",
             ["bosses"] = {
                 {
@@ -1676,7 +1676,7 @@ Cell_ExpansionData.data = {
         }, -- [15]
         {
             ["id"] = 254,
-            ["image"] = 608218,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TempestKeep",
             ["name"] = "The Arcatraz",
             ["bosses"] = {
                 {
@@ -1703,7 +1703,7 @@ Cell_ExpansionData.data = {
         }, -- [16]
         {
             ["id"] = 255,
-            ["image"] = 608198,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CavernsOfTime",
             ["name"] = "The Black Morass",
             ["bosses"] = {
                 {
@@ -1725,7 +1725,7 @@ Cell_ExpansionData.data = {
         }, -- [17]
         {
             ["id"] = 256,
-            ["image"] = 608207,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HellfireCitadel",
             ["name"] = "The Blood Furnace",
             ["bosses"] = {
                 {
@@ -1747,7 +1747,7 @@ Cell_ExpansionData.data = {
         }, -- [18]
         {
             ["id"] = 257,
-            ["image"] = 608218,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TempestKeep",
             ["name"] = "The Botanica",
             ["bosses"] = {
                 {
@@ -1779,7 +1779,7 @@ Cell_ExpansionData.data = {
         }, -- [19]
         {
             ["id"] = 258,
-            ["image"] = 608218,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TempestKeep",
             ["name"] = "The Mechanar",
             ["bosses"] = {
                 {
@@ -1801,7 +1801,7 @@ Cell_ExpansionData.data = {
         }, -- [20]
         {
             ["id"] = 259,
-            ["image"] = 608207,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HellfireCitadel",
             ["name"] = "The Shattered Halls",
             ["bosses"] = {
                 {
@@ -1823,7 +1823,7 @@ Cell_ExpansionData.data = {
         }, -- [21]
         {
             ["id"] = 260,
-            ["image"] = 608199,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CoilfangReservoir",
             ["name"] = "The Slave Pens",
             ["bosses"] = {
                 {
@@ -1845,7 +1845,7 @@ Cell_ExpansionData.data = {
         }, -- [22]
         {
             ["id"] = 261,
-            ["image"] = 608199,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CoilfangReservoir",
             ["name"] = "The Steamvault",
             ["bosses"] = {
                 {
@@ -1867,7 +1867,7 @@ Cell_ExpansionData.data = {
         }, -- [23]
         {
             ["id"] = 262,
-            ["image"] = 608199,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-CoilfangReservoir",
             ["name"] = "The Underbog",
             ["bosses"] = {
                 {
@@ -1896,7 +1896,7 @@ Cell_ExpansionData.data = {
     ["Wrath of the Lich King"] = {
         {
             ["id"] = 753,
-            ["image"] = 1396596,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-VaultofArchavon",
             ["name"] = "Vault of Archavon",
             ["bosses"] = {
                 {
@@ -1923,7 +1923,7 @@ Cell_ExpansionData.data = {
         }, -- [1]
         {
             ["id"] = 754,
-            ["image"] = 1396587,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Naxxramas",
             ["name"] = "Naxxramas",
             ["bosses"] = {
                 {
@@ -2005,7 +2005,7 @@ Cell_ExpansionData.data = {
         }, -- [2]
         {
             ["id"] = 755,
-            ["image"] = 1396588,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-ObsidianSanctum",
             ["name"] = "The Obsidian Sanctum",
             ["bosses"] = {
                 {
@@ -2017,7 +2017,7 @@ Cell_ExpansionData.data = {
         }, -- [3]
         {
             ["id"] = 756,
-            ["image"] = 1396581,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-EyeofEternity",
             ["name"] = "The Eye of Eternity",
             ["bosses"] = {
                 {
@@ -2029,7 +2029,7 @@ Cell_ExpansionData.data = {
         }, -- [4]
         {
             ["id"] = 759,
-            ["image"] = 1396595,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Ulduar",
             ["name"] = "Ulduar",
             ["bosses"] = {
                 {
@@ -2106,7 +2106,7 @@ Cell_ExpansionData.data = {
         }, -- [5]
         {
             ["id"] = 757,
-            ["image"] = 1396594,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TrialoftheCrusader",
             ["name"] = "Trial of the Crusader",
             ["bosses"] = {
                 {
@@ -2138,7 +2138,7 @@ Cell_ExpansionData.data = {
         }, -- [6]
         {
             ["id"] = 760,
-            ["image"] = 1396589,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Onyxia",
             ["name"] = "Onyxia's Lair",
             ["bosses"] = {
                 {
@@ -2150,7 +2150,7 @@ Cell_ExpansionData.data = {
         }, -- [7]
         {
             ["id"] = 758,
-            ["image"] = 1396583,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-IcecrownCitadel",
             ["name"] = "Icecrown Citadel",
             ["bosses"] = {
                 {
@@ -2217,7 +2217,7 @@ Cell_ExpansionData.data = {
         }, -- [8]
         {
             ["id"] = 761,
-            ["image"] = 1396590,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-RubySanctum",
             ["name"] = "The Ruby Sanctum",
             ["bosses"] = {
                 {
@@ -2229,7 +2229,7 @@ Cell_ExpansionData.data = {
         }, -- [9]
         {
             ["id"] = 271,
-            ["image"] = 608192,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-AhnkahetTheOldKingdom",
             ["name"] = "Ahn'kahet: The Old Kingdom",
             ["bosses"] = {
                 {
@@ -2256,7 +2256,7 @@ Cell_ExpansionData.data = {
         }, -- [10]
         {
             ["id"] = 272,
-            ["image"] = 608194,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-AzjolNerub",
             ["name"] = "Azjol-Nerub",
             ["bosses"] = {
                 {
@@ -2278,7 +2278,7 @@ Cell_ExpansionData.data = {
         }, -- [11]
         {
             ["id"] = 273,
-            ["image"] = 608201,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-DrakTharonKeep",
             ["name"] = "Drak'Tharon Keep",
             ["bosses"] = {
                 {
@@ -2305,7 +2305,7 @@ Cell_ExpansionData.data = {
         }, -- [12]
         {
             ["id"] = 274,
-            ["image"] = 608203,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-Gundrak",
             ["name"] = "Gundrak",
             ["bosses"] = {
                 {
@@ -2332,7 +2332,7 @@ Cell_ExpansionData.data = {
         }, -- [13]
         {
             ["id"] = 275,
-            ["image"] = 608204,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HallsofLightning",
             ["name"] = "Halls of Lightning",
             ["bosses"] = {
                 {
@@ -2359,7 +2359,7 @@ Cell_ExpansionData.data = {
         }, -- [14]
         {
             ["id"] = 276,
-            ["image"] = 608205,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HallsofReflection",
             ["name"] = "Halls of Reflection",
             ["bosses"] = {
                 {
@@ -2381,7 +2381,7 @@ Cell_ExpansionData.data = {
         }, -- [15]
         {
             ["id"] = 277,
-            ["image"] = 608206,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-HallsofStone",
             ["name"] = "Halls of Stone",
             ["bosses"] = {
                 {
@@ -2408,7 +2408,7 @@ Cell_ExpansionData.data = {
         }, -- [16]
         {
             ["id"] = 278,
-            ["image"] = 608210,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-PitofSaron",
             ["name"] = "Pit of Saron",
             ["bosses"] = {
                 {
@@ -2430,7 +2430,7 @@ Cell_ExpansionData.data = {
         }, -- [17]
         {
             ["id"] = 279,
-            ["image"] = 608219,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TheCullingOfStratholme",
             ["name"] = "The Culling of Stratholme",
             ["bosses"] = {
                 {
@@ -2457,7 +2457,7 @@ Cell_ExpansionData.data = {
         }, -- [18]
         {
             ["id"] = 280,
-            ["image"] = 608220,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TheForgeofSouls",
             ["name"] = "The Forge of Souls",
             ["bosses"] = {
                 {
@@ -2474,7 +2474,7 @@ Cell_ExpansionData.data = {
         }, -- [19]
         {
             ["id"] = 281,
-            ["image"] = 608221,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TheNexus",
             ["name"] = "The Nexus",
             ["bosses"] = {
                 {
@@ -2501,7 +2501,7 @@ Cell_ExpansionData.data = {
         }, -- [20]
         {
             ["id"] = 282,
-            ["image"] = 608222,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TheOculus",
             ["name"] = "The Oculus",
             ["bosses"] = {
                 {
@@ -2528,7 +2528,7 @@ Cell_ExpansionData.data = {
         }, -- [21]
         {
             ["id"] = 283,
-            ["image"] = 608228,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-VioletHold",
             ["name"] = "The Violet Hold",
             ["bosses"] = {
                 {
@@ -2570,7 +2570,7 @@ Cell_ExpansionData.data = {
         }, -- [22]
         {
             ["id"] = 284,
-            ["image"] = 608224,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-TrialOfTheChampion",
             ["name"] = "Trial of the Champion",
             ["bosses"] = {
                 {
@@ -2597,7 +2597,7 @@ Cell_ExpansionData.data = {
         }, -- [23]
         {
             ["id"] = 285,
-            ["image"] = 608226,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-UtgardeKeep",
             ["name"] = "Utgarde Keep",
             ["bosses"] = {
                 {
@@ -2619,7 +2619,7 @@ Cell_ExpansionData.data = {
         }, -- [24]
         {
             ["id"] = 286,
-            ["image"] = 608227,
+            ["image"] = "Interface\\AddOns\\Cell\\Media\\EncounterJournal\\UI-EJ-DUNGEONBUTTON-UtgardePinnacle",
             ["name"] = "Utgarde Pinnacle",
             ["bosses"] = {
                 {

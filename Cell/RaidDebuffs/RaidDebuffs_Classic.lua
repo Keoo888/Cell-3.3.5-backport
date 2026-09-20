@@ -508,17 +508,12 @@ local debuffs = {
             6466, -- Axe Toss
         },
         [89] = { -- 格拉布托克
-            87859, -- Fists of Flame
-            87861, -- Fists of Frost
         },
         [90] = { -- 赫利克斯·破甲
-            88352, -- Chest Bomb
         },
         [91] = { -- 死神5000
-            88495, -- Harvest
         },
         [92] = { -- 撕心狼将军
-            88836, -- Go For the Throat
         },
         [93] = { -- “船长”曲奇
             6306, -- Acid Splash

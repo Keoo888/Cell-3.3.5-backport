@@ -1782,7 +1782,7 @@ local function UnitButton_UpdateDebuffs(self)
 
         -- update raidDebuffs
         raidDebuffs:UpdateSize(startIndex - 1)
-        for i = startIndex, 3 do
+        for i = startIndex, 10 do
             raidDebuffs[i].index = nil
         end
 

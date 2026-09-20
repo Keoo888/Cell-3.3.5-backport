@@ -1023,7 +1023,8 @@ local function RaidDebuffs_HideGlow(self, glowType)
 end
 
 local function RaidDebuffs_ShowTooltip(raidDebuffs, show)
-    for i = 1, 3 do
+    --! custom: raised the slot ceiling 3 -> 10, same count as the debuffs indicator.
+    for i = 1, 10 do
         if show then
             raidDebuffs[i]:SetScript("OnEnter", function(self)
                 --! WotLK fix: same dead retail branch as in Debuffs_ShowTooltip -
@@ -1066,7 +1067,7 @@ function I.CreateRaidDebuffs(parent)
 
     raidDebuffs.ShowTooltip = RaidDebuffs_ShowTooltip
 
-    for i = 1, 3 do
+    for i = 1, 10 do
         local frame = I.CreateAura_BorderIcon(parent:GetName().."RaidDebuff"..i, raidDebuffs, 2)
         tinsert(raidDebuffs, frame)
         -- frame:SetScript("OnShow", raidDebuffs.UpdateSize)

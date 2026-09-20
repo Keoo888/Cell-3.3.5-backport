@@ -453,14 +453,28 @@ local function InitIndicator(indicatorName)
 
     elseif indicatorName == "raidDebuffs" then
         indicator.isRaidDebuffs = true
-        local types = {"", "Curse", "Magic"}
-        for i = 1, 3 do
+        --! WotLK fix: upstream previews ten question marks. Show real ICC debuffs
+        --! instead; icon and dispel type of each come from the client's Spell.dbc.
+        local types = {"", "Disease", "", "", "", "", "", "", "", ""}
+        local icons = {
+            "Interface\\Icons\\Spell_Shadow_CreepingPlague",     -- Gas Spore
+            "Interface\\Icons\\Ability_Creature_Disease_02",     -- Mutated Infection
+            "Interface\\Icons\\Ability_Warlock_ImprovedSoulLeech", -- Essence of the Blood Queen
+            "Interface\\Icons\\Spell_DeathKnight_BladedArmor",   -- Mark of the Fallen Champion
+            "Interface\\Icons\\Spell_Shadow_DestructiveSoul",    -- Pact of the Darkfallen
+            "Interface\\Icons\\Spell_Frost_FrozenCore",          -- Ice Tomb
+            "Interface\\Icons\\Ability_Rogue_EnvelopingShadows", -- Infest
+            "Interface\\Icons\\Spell_Frost_ColdHearted",         -- Penetrating Cold
+            "Interface\\Icons\\Ability_Creature_Cursed_01",      -- Vile Gas
+            "Interface\\Icons\\Spell_Shadow_PlagueCloud",        -- Sticky Ooze
+        }
+        for i = 1, 10 do
             indicator[i]:HookScript("OnShow", function()
-                indicator[i]:SetCooldown(GetTime(), 13, types[i], "Interface\\Icons\\INV_Misc_QuestionMark", 7)
+                indicator[i]:SetCooldown(GetTime(), 13, types[i], icons[i], 7)
                 --! WotLK fix: OnCooldownDone is not native on 3.3.5; use the
                 --! Cell-owned completion handler for this preview cooldown.
                 I.SetCooldownDoneHandler(indicator[i].cooldown, function()
-                    indicator[i]:SetCooldown(GetTime(), 13, types[i], "Interface\\Icons\\INV_Misc_QuestionMark", 7)
+                    indicator[i]:SetCooldown(GetTime(), 13, types[i], icons[i], 7)
                 end)
             end)
             indicator[i]:HookScript("OnHide", function()
@@ -1666,7 +1680,7 @@ indicatorSettings = {
 --! toggle custom indicators already carry (see SESSION_NOTES #20). A stack bump made
 --! the icon hop with no way to switch it off per indicator.
 ["debuffs"] = {"enabled", "checkbutton:dispellableByMe", "debuffBlacklist", "bigDebuffs", "durationVisibility", "checkbutton2:showAnimation", "checkbutton3:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton4:enableBlacklistShortcut:"..DEBUFFS_TOOLTIP2, "checkbutton5:showJump:"..SHOW_JUMP_TOOLTIP, "size-normal-big", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
-["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton3:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton3:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["targetedSpells"] = {"enabled", "checkbutton:showAllSpells:"..L["Glow is only available to the spells in the list below"], "targetedSpellsList", "targetedSpellsGlow", "size-border", "num:3", "orientation", "position", "frameLevel", "font"},
 --! WotLK fix: the "targetCounter" row is deleted along with the indicator (GAP-081) -
 --! counting the enemies that target a unit was only ever possible off nameplates via

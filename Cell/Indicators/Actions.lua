@@ -123,10 +123,18 @@ local function CreateCellObjectPool(creationFunc, resetterFunc)
         return true
     end
 
+    -- stop-motion canvases release themselves from OnHide; this guards the re-entry
+    function pool:IsActive(object)
+        return self.activeObjects[object] == true
+    end
+
     return pool
 end
 
 local function ResetterFunc(_, canvas)
+    canvas:SetScript("OnUpdate", nil)
+    canvas.elapsed = nil
+    canvas.duration = nil
     canvas:Hide()
 end
 
@@ -162,190 +170,108 @@ local function AlignClip(canvas, f)
 end
 
 -------------------------------------------------
--- animation: A
+-- stop-motion animations
 -------------------------------------------------
-local function CreateAnimationGroup_TypeA()
+--! WotLK fix: types A, B and G are sprite sheets played frame by frame, not
+--! hand-built AnimationGroups. 3.3.5 has no SetRotation on a colour fill and no
+--! mask textures, so the old hand-coded bars could not reproduce the intended
+--! shapes at all. Each atlas is 64 frames of 128x64 in a 1024x512 sheet; the
+--! half-texel inset keeps neighbouring frames from bleeding in.
+local ActionFrameCount = 64
+local ActionAtlasColumns = 8
+local ActionAtlasTileWidth = 128
+local ActionAtlasTileHeight = 64
+local ActionAtlasWidth = 1024
+local ActionAtlasHeight = 512
+local ActionMediaPath = "Interface\\AddOns\\Cell\\Media\\Actions\\"
+local ActionDurations = {
+    A = 1.1,
+    B = 0.7,
+    G = 1,
+}
+local ActionAtlases = {
+    A = ActionMediaPath .. "Action_A_horizontal.tga",
+    AVertical = ActionMediaPath .. "Action_A_vertical.tga",
+    B = ActionMediaPath .. "Action_B.tga",
+    G = ActionMediaPath .. "Action_G.tga",
+}
+
+local function SetActionAtlasFrame(texture, frameIndex)
+    local column = frameIndex % ActionAtlasColumns
+    local row = floor(frameIndex / ActionAtlasColumns)
+    local left = (column * ActionAtlasTileWidth + 1.5) / ActionAtlasWidth
+    local right = ((column + 1) * ActionAtlasTileWidth - 1.5) / ActionAtlasWidth
+    local top = (row * ActionAtlasTileHeight + 1.5) / ActionAtlasHeight
+    local bottom = ((row + 1) * ActionAtlasTileHeight - 1.5) / ActionAtlasHeight
+    texture:SetTexCoord(left, right, top, bottom)
+end
+
+local function StopMotionOnUpdate(canvas, elapsed)
+    canvas.elapsed = canvas.elapsed + elapsed
+    local progress = min(1, canvas.elapsed / canvas.duration)
+    local frameIndex = floor(progress * (ActionFrameCount - 1) + 0.5)
+
+    if frameIndex ~= canvas.frameIndex then
+        canvas.frameIndex = frameIndex
+        SetActionAtlasFrame(canvas.texture, frameIndex)
+    end
+
+    if progress == 1 then
+        animationPool[canvas.animationType]:Release(canvas)
+    end
+end
+
+local function OnAnimationHide(canvas)
+    local pool = animationPool[canvas.animationType]
+    -- Release removes the active entry before the resetter hides the canvas
+    if pool:IsActive(canvas) then
+        pool:Release(canvas)
+    end
+end
+
+local function CreateStopMotionAnimation(animationType)
     local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, CreateClip(canvas))
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture(Cell.vars.whiteTexture)
-
+    canvas:Hide()
     canvas:EnableMouse(false)
-    f:EnableMouse(false)
+    canvas.animationType = animationType
+    canvas:SetScript("OnHide", OnAnimationHide)
 
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
+    local texture = canvas:CreateTexture(nil, "ARTWORK")
+    texture:SetAllPoints(canvas)
+    canvas.texture = texture
+    canvas.ag = canvas
 
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.6
-    --! WotLK fix: use Cell's private absolute-alpha driver; do not modify shared Alpha methods.
-    A.SetAbsoluteAlpha(a1, 0, 1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.6
-    t1:SetOrder(1)
-    t1:SetSmoothing("OUT")
-    t1:SetDuration(t1.duration)
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    A.SetAbsoluteAlpha(a2, 1, 0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    -- a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.A:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
+    function canvas:Display(parent, r, g, b)
         canvas:SetParent(parent)
         canvas:SetAllPoints(parent)
-        AlignClip(canvas, f)
+        canvas:SetFrameLevel(parent:GetFrameLevel() + 1)
+        canvas.elapsed = 0
+        canvas.duration = ActionDurations[animationType] / parent.speed
+        canvas.frameIndex = nil
 
-        -- the pool is shared between layouts: drop the previous orientation
-        f:ClearAllPoints()
-
-        if parent.orientation == "horizontal" then
-            f:SetPoint("TOPRIGHT", canvas, "TOPLEFT")
-            f:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMLEFT")
-            f:SetWidth(15)
-
-            t1:SetOffset(canvas:GetWidth(), 0)
-            -- tex:SetGradient("HORIZONTAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
-            --! WotLK fix: SetGradientAlpha(orientation, r,g,b,a, r,g,b,a) is the
-            --! native 3.3.5 form; keep SetVertexColor as a base tint below it.
-            tex:SetVertexColor(r, g, b, 1)
-            tex:SetGradientAlpha("HORIZONTAL", r, g, b, 0, r, g, b, 1)
+        if animationType == "A" and parent.orientation ~= "horizontal" then
+            texture:SetTexture(ActionAtlases.AVertical)
         else
-            f:SetPoint("TOPLEFT", canvas, "BOTTOMLEFT")
-            f:SetPoint("TOPRIGHT", canvas, "BOTTOMRIGHT")
-            f:SetHeight(15)
-
-            t1:SetOffset(0, canvas:GetHeight())
-            -- tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
-            tex:SetVertexColor(r, g, b, 1)
-            tex:SetGradientAlpha("VERTICAL", r, g, b, 0, r, g, b, 1)
+            texture:SetTexture(ActionAtlases[animationType])
         end
-
-        a1:SetDuration(a1.duration / parent.speed)
-        t1:SetDuration(t1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        if ag:IsPlaying() then
-            --! WotLK fix: AnimationGroup:Restart is not native on 3.3.5; keep
-            --! the restart behavior private to this Cell-owned animation.
-            ag:Stop()
-        end
-        ag:Play()
+        texture:SetVertexColor(r, g, b, 1)
+        SetActionAtlasFrame(texture, 0)
+        canvas:SetScript("OnUpdate", StopMotionOnUpdate)
+        canvas:Show()
     end
 
     return canvas
 end
 
-animationPool.A = CreateCellObjectPool(CreateAnimationGroup_TypeA, ResetterFunc)
+-------------------------------------------------
+-- animation: A
+-------------------------------------------------
+animationPool.A = CreateCellObjectPool(function() return CreateStopMotionAnimation("A") end, ResetterFunc)
 
 -------------------------------------------------
 -- animation: B
 -------------------------------------------------
-local function CreateAnimationGroup_TypeB()
-    local WIDTH = 20
-
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, CreateClip(canvas))
-    f:SetPoint("TOPRIGHT", canvas, "TOPLEFT")
-    f:SetPoint("BOTTOMRIGHT", canvas, "BOTTOMLEFT")
-    f:SetWidth(WIDTH)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture(Cell.vars.whiteTexture)
-    --! WotLK fix: upstream tilts this bar 45 degrees with
-    --! SetRotation(rad, CreateVector2D(1, 0)) and lets a mask cut the overhang.
-    --! On 3.3.5 SetRotation only spins the image inside its region, so on a plain
-    --! colour fill it changes nothing whatever we pass - the bar stays upright.
-    --! So keep it upright on purpose, filling the frame height, and set it apart
-    --! from type A the way the other 3.3.5 port does: wider, dimmer, eased at
-    --! both ends. The old code sized the texture for the tilt (1.41 x height,
-    --! anchored bottom right), which only ever showed as a bar too tall to fit.
-
-    canvas:EnableMouse(false)
-    f:EnableMouse(false)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    --! WotLK fix: upstream leaves the fade-out commented out, so the bar used to
-    --! appear at full strength. Fade it in with the same driven Alpha type A uses
-    --! (order 1, explicit smoothing) and let the sweep carry it out of the clip
-    --! instead of ending on a visible bar: the travel below overshoots the right
-    --! edge by the bar's own width, so there is nothing left to snap away.
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.7
-    A.SetAbsoluteAlpha(a1, 0, 0.7)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local t1 = ag:CreateAnimation("Translation")
-    t1.duration = 0.7
-    t1:SetOrder(1)
-    t1:SetSmoothing("IN_OUT")
-    t1:SetDuration(t1.duration)
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.B:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-        AlignClip(canvas, f)
-
-        a1:SetDuration(a1.duration / parent.speed)
-        t1:SetDuration(t1.duration / parent.speed)
-
-        -- starts just outside the left edge, leaves just past the right one
-        t1:SetOffset(canvas:GetWidth() + WIDTH, 0)
-
-        --! WotLK fix: SetGradientAlpha(orientation, r,g,b,a, r,g,b,a) is the
-        --! native 3.3.5 form; keep SetVertexColor as a base tint below it.
-        tex:SetVertexColor(r, g, b, 1)
-        tex:SetGradientAlpha("HORIZONTAL", r, g, b, 0, r, g, b, 1)
-
-        if ag:IsPlaying() then
-            --! WotLK fix: AnimationGroup:Restart is not native on 3.3.5; keep
-            --! the restart behavior private to this Cell-owned animation.
-            ag:Stop()
-        end
-        ag:Play()
-    end
-
-    return canvas
-end
-
-animationPool.B = CreateCellObjectPool(CreateAnimationGroup_TypeB, ResetterFunc)
+animationPool.B = CreateCellObjectPool(function() return CreateStopMotionAnimation("B") end, ResetterFunc)
 
 -------------------------------------------------
 -- animation: C
@@ -677,76 +603,7 @@ animationPool.F = CreateCellObjectPool(CreateAnimationGroup_TypeF, ResetterFunc)
 -------------------------------------------------
 -- animation: G
 -------------------------------------------------
-local function CreateAnimationGroup_TypeG()
-    local canvas = CreateFrame("Frame")
-
-    -- frame
-    local f = CreateFrame("Frame", nil, canvas)
-    f:SetPoint("TOPLEFT", canvas)
-    f:SetPoint("TOPRIGHT", canvas)
-
-    -- texture
-    local tex = f:CreateTexture(nil, "ARTWORK")
-    tex:SetAllPoints(f)
-    tex:SetTexture(Cell.vars.whiteTexture)
-
-    canvas:EnableMouse(false)
-    f:EnableMouse(false)
-
-    -- animation
-    local ag = f:CreateAnimationGroup()
-    canvas.ag = ag
-
-    local a1 = ag:CreateAnimation("Alpha")
-    a1.duration = 0.5
-    --! WotLK fix: use Cell's private absolute-alpha driver; do not modify shared Alpha methods.
-    A.SetAbsoluteAlpha(a1, 0, 1)
-    a1:SetOrder(1)
-    a1:SetDuration(a1.duration)
-    a1:SetSmoothing("OUT")
-
-    local a2 = ag:CreateAnimation("Alpha")
-    a2.duration = 0.5
-    A.SetAbsoluteAlpha(a2, 1, 0)
-    a2:SetDuration(a2.duration)
-    a2:SetOrder(2)
-    a2:SetSmoothing("IN")
-
-    ag:SetScript("OnPlay", function()
-        canvas:Show()
-    end)
-
-    ag:SetScript("OnFinished", function()
-        animationPool.G:Release(canvas)
-    end)
-
-    function ag:Display(parent, r, g, b)
-        canvas:SetParent(parent)
-        canvas:SetAllPoints(parent)
-
-        f:SetHeight(canvas:GetHeight() / 2)
-
-        -- tex:SetGradient("VERTICAL", CreateColor(r, g, b, 0), CreateColor(r, g, b, 1))
-        --! WotLK fix: SetGradientAlpha(orientation, r,g,b,a, r,g,b,a) is the
-        --! native 3.3.5 form; keep SetVertexColor as a base tint below it.
-        tex:SetVertexColor(r, g, b, 1)
-        tex:SetGradientAlpha("VERTICAL", r, g, b, 0, r, g, b, 1)
-
-        a1:SetDuration(a1.duration / parent.speed)
-        a2:SetDuration(a2.duration / parent.speed)
-
-        if ag:IsPlaying() then
-            --! WotLK fix: AnimationGroup:Restart is not native on 3.3.5; keep
-            --! the restart behavior private to this Cell-owned animation.
-            ag:Stop()
-        end
-        ag:Play()
-    end
-
-    return canvas
-end
-
-animationPool.G = CreateCellObjectPool(CreateAnimationGroup_TypeG, ResetterFunc)
+animationPool.G = CreateCellObjectPool(function() return CreateStopMotionAnimation("G") end, ResetterFunc)
 
 -------------------------------------------------
 -- indicator

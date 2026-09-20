@@ -509,131 +509,6 @@ local function SetOnEnterLeave(frame)
 end
 
 -------------------------------------------------
--- texture helpers
--------------------------------------------------
-local fallbackTexture = "Interface\\Icons\\INV_Misc_QuestionMark"
-local instanceTexCoord = {0.015, 0.666, 0.03, 0.72}
-local portraitTexCoord = {0.08, 0.92, 0.08, 0.92}
-local textureDebug, textureDebugLimit = false, 0
--- instanceId -> ordered list of loading-screen paths, first hit wins (TryApplyCandidates)
---! WotLK fix: порядок в каждом списке значащий, и первым стоит имя, существование
---! которого доказано пробой по хеш-таблицам MPQ (audit/tools/mpq_probe.py). Прежние
---! имена оставлены следом как фолбэк: они пришли из ретейла, но на чужой сборке
---! клиента могут и оказаться на месте, а лишняя попытка стоит один SetTexture.
---! Добавляя сюда путь, сначала прогони пробу: SetTexture на несуществующий файл
---! молча гасит текстуру, ошибки в !BugGrabber при этом нет (см. GAP-063).
-local instanceTextureCandidates = {
-    -- WotLK raids
-    [759] = { -- Ulduar
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenUlduarRaid",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenUlduar",
-    },
-    [757] = { -- Trial of the Crusader
-        --! WotLK fix: оба прежних имени (ArgentTournament, CrusadersColiseum) в
-        --! клиенте 3.3.5a отсутствуют - список промахивался целиком, и инстанс
-        --! получал знак вопроса. Живое имя нашла проба по хеш-таблицам MPQ
-        --! (audit/tools/mpq_probe.py): LoadScreenArgentRaid, PRESENT в patch-enUS.
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenArgentRaid",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenArgentTournament",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenCrusadersColiseum",
-    },
-    [758] = { -- Icecrown Citadel
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenIcecrownCitadel",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenIcecrownCitadelRaid",
-    },
-    [755] = { -- Obsidian Sanctum
-        --! WotLK fix: единственное имя в списке (ObsidianSanctum) в клиенте 3.3.5a
-        --! отсутствует - фолбэку было некуда падать, и инстанс получал знак вопроса.
-        --! Клиент называет этот экран по чертогу чёрного дракона в Чертогах Аспектов:
-        --! LoadScreenChamberBlack, PRESENT в locale-enUS (проба mpq_probe.py).
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenChamberBlack",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenObsidianSanctum",
-    },
-    [756] = { -- Eye of Eternity
-        --! WotLK fix: оба прежних имени (EyeOfEternity, TheEyeOfEternity) в клиенте
-        --! 3.3.5a отсутствуют - список промахивался целиком. Клиент называет экран
-        --! по боссу: LoadScreenMalygos, PRESENT в lichking-locale-enUS (mpq_probe.py).
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenMalygos",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenEyeOfEternity",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenTheEyeOfEternity",
-    },
-    [754] = { -- Naxxramas
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenNaxxramas",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenNaxxramasRaid",
-    },
-    [753] = { -- Vault of Archavon
-        --! WotLK fix: имена переставлены. VaultofArchavon в клиенте 3.3.5a нет, а
-        --! LoadScreenWintergrasp есть - это и есть тот экран, который клиент сам
-        --! показывает на входе в Архавон, потому что рейд лежит в Вечной Битве.
-        --! Фолбэк работал и до правки, теперь без промаха на первой попытке.
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenWintergrasp",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenVaultofArchavon",
-    },
-    [760] = { -- Onyxia
-        --! WotLK fix: оба прежних имени (OnyxiasLair, Onyxia) в клиенте 3.3.5a
-        --! отсутствуют, и своего экрана у логова Ониксии здесь нет вовсе - проверены
-        --! ещё восемь написаний, все ABSENT (mpq_probe.py). Поэтому первым стоит
-        --! общий рейдовый экран LoadScreenRaid (PRESENT в locale-enUS): картинка
-        --! вместо знака вопроса, и это ровно то, что показывает сам клиент, когда
-        --! у инстанса нет собственного экрана.
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenRaid",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenOnyxiasLair",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenOnyxia",
-    },
-    [761] = { -- Ruby Sanctum
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenRubySanctum",
-        "Interface\\GLUES\\LoadingScreens\\LoadScreenTheRubySanctum",
-    },
-}
-local defaultTextureCandidates = {
-    "Interface\\GLUES\\LoadingScreens\\LoadScreenNorthrend",
-    "Interface\\GLUES\\Common\\Glues-WoW-Logo",
-}
-local textureDebugAnnounced
-local ApplyTexture -- forward declaration so helpers can reference
-
-local function DebugTexture(msg, ...)
-    if not textureDebug or textureDebugLimit <= 0 then return end
-    textureDebugLimit = textureDebugLimit - 1
-    F.Print("[RaidDebuffs tex] "..msg:format(...))
-end
-
-local function ApplyTexture(tex, asset, coords)
-    if not asset then return false end
-    -- reset coord so stale state doesn't leak through failures
-    tex:SetTexCoord(0, 1, 0, 1)
-    local ok = tex:SetTexture(asset)
-    local current = tex:GetTexture()
-    -- SetTexture may return true even when the asset is missing; rely on GetTexture not being nil
-    if not ok or not current then
-        return false
-    end
-    -- if the game gave us a generic filler (question mark or SolidTexture), treat as failure
-    if asset ~= fallbackTexture then
-        if current == fallbackTexture or current == 134400 or current == "SolidTexture" then
-            return false
-        end
-    end
-
-    if coords then
-        tex:SetTexCoord(unpack(coords))
-    end
-    tex:SetVertexColor(1, 1, 1, 1)
-    return true
-end
-
-local function TryApplyCandidates(tex, candidates, coords)
-    if not candidates then return false end
-    for _, asset in ipairs(candidates) do
-        if ApplyTexture(tex, asset, coords) then
-            DebugTexture("candidate succeeded asset=%s", tostring(asset))
-            return true
-        end
-    end
-    return false
-end
-
--------------------------------------------------
 -- instances frame
 -------------------------------------------------
 local instancesFrame
@@ -666,10 +541,21 @@ local function CreateInstanceFrame()
     imageFrame.bg:SetPoint("TOPLEFT", imageFrame, -2, 0)
     imageFrame.bg:SetPoint("BOTTOMRIGHT", instanceNameText, 0, -1)
 
-    -- disable hover popup
-    imageFrame:Hide()
-    ShowInstanceImage = function() end
-    HideInstanceImage = function() end
+    --! WotLK fix: upstream image ids are retail FileDataIDs, which 3.3.5 cannot
+    --! resolve. ExpansionData now carries a literal path into Cell\Media\EncounterJournal.
+    ShowInstanceImage = function(image, b)
+        imageFrame.tex:SetTexture(image)
+        imageFrame.tex:SetTexCoord(0.015, 0.666, 0.03, 0.72)
+        instanceNameText:SetText(b:GetFontString():GetText())
+
+        imageFrame:ClearAllPoints()
+        imageFrame:SetPoint("BOTTOMRIGHT", b, "BOTTOMLEFT", -5, 2)
+        imageFrame:Show()
+    end
+
+    HideInstanceImage = function()
+        imageFrame:Hide()
+    end
 end
 
 ShowInstances = function(eName)
@@ -738,6 +624,13 @@ ShowInstances = function(eName)
             popup:SetPoint("TOPLEFT", 100, -170)
         end
         ShowBosses(id)
+    end, nil, nil, function(b)
+        local _, iIndex = F.SplitToNumber("-", b.id)
+        ShowInstanceImage(data[iIndex]["image"], b)
+        instancesFrame:GetScript("OnEnter")()
+    end, function(b)
+        HideInstanceImage()
+        instancesFrame:GetScript("OnLeave")()
     end)
 
     -- show the first boss
@@ -2627,11 +2520,6 @@ local function ShowTab(tab)
             CreateBossesFrame()
             CreateDebuffsFrame()
             CreateDetailsFrame()
-            if textureDebug and not textureDebugAnnounced then
-                textureDebugAnnounced = true
-                textureDebugLimit = 200 -- give us more headroom for this session
-                F.Print("[RaidDebuffs tex] debug logging enabled (up to "..textureDebugLimit.." messages). Hover instances/bosses to log texture ids.")
-            end
         end
 
         debuffsTab:Show()

@@ -633,13 +633,10 @@ local debuffs = {
         },
         [1630] = { -- 腐面
             69674, -- 畸变感染
-            --! WotLK fix: was unquoted, and Festergut's Vile Gas is 69240 at 1629 - same
-            --! name in Spell.dbc, so one of the two rows was dead by `pairs` order. Quoted
-            --! = trackByID: this row keys on its own id, Festergut's keeps the name key.
-            "72272", -- Vile Gas
+            --! WotLK fix: was "72272" - an id the server never sends, so this row was
+            --! dead and Putricide's balcony gas fell through to Festergut's name key.
+            "72273", -- Vile Gas
             69789, -- 软泥洪流
-            --! WotLK fix: missing - the puddle the small oozes leave behind, 18 hits on
-            --! 15 players in reference/WoWCombatLog.txt (25-man, 20:55-21:02).
             71208, -- Sticky Ooze
         },
         [1631] = { -- 普崔塞德教授
