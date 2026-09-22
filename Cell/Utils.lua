@@ -295,14 +295,19 @@ do
     -- Sources, in priority order:
     --   1. Native 3.3.5 LFD role (converted from three booleans; also
     --      passes through retail-style strings on custom cores)
-    --   2. GetRaidRosterInfo role (LFG / raid assignments)
-    --   3. Party MAINTANK / MAINASSIST assignments
-    --   4. LibGroupInfo talent-based specRole ONLY (never assignedRole - that
+    --   2. GetRaidRosterInfo role, but ONLY when it holds a real role string
+    --   3. LibGroupInfo talent-based specRole ONLY (never assignedRole - that
     --      field is written FROM this function, reading it back would create
     --      a circular dependency)
-    --   5. LibGroupTalents-1.0, if some other addon (DBM / WeakAuras / ElvUI)
+    --   4. LibGroupTalents-1.0, if some other addon (DBM / WeakAuras / ElvUI)
     --      has it loaded: talents of units Cell could never inspect, because
     --      that library also fetches them over the addon channel
+    --
+    --! WotLK fix: the raid leader's main tank / main assist marker is NOT a source.
+    --! On 3.3.5a slot 10 of GetRaidRosterInfo carries that marker, not a combat role
+    --! (Blizzard_RaidUI.lua:410 compares it against MAINTANK / MAINASSIST only), so
+    --! reading it as a role turned every assisted tank into a DAMAGER. The marker is
+    --! only an ordering hint - RaidFrame.lua puts main tanks first inside the TANK group.
 
     local orig_UnitGroupRolesAssigned = UnitGroupRolesAssigned
 
@@ -409,41 +414,29 @@ do
             -- GetRaidRosterInfo returns: name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML
             local _, _, _, _, _, _, _, _, _, role = GetRaidRosterInfo(raidIndex + 1)
             if details then details.raidRosterRole = role end
-            if not result and role and role ~= "NONE" and role ~= "" then
-                roleSource = "GetRaidRosterInfo"
-                if role == "MAINTANK" or role == "TANK" then
+            --! WotLK fix: on a stock core slot 10 only ever holds the leader's MAINTANK /
+            --! MAINASSIST marker, so take a real role string only. Custom cores that write
+            --! one there keep working; the marker no longer decides anything.
+            if not result and role then
+                if role == "TANK" then
                     result = "TANK"
                 elseif role == "HEALER" then
                     result = "HEALER"
-                elseif role == "MAINASSIST" or role == "DAMAGER" or role == "DPS" then
+                elseif role == "DAMAGER" or role == "DPS" then
                     result = "DAMAGER"
                 end
+                if result then roleSource = "GetRaidRosterInfo" end
             end
         end
 
-        -- Fallback: Check party assignments (Main Tank/Main Assist)
-        --! WotLK fix: only meaningful while actually in a group. On some
-        --! cores GetPartyAssignment("MAINTANK", "player") returns true when
-        --! SOLO, painting a tank icon on any ungrouped character (tester:
-        --! resto shaman solo in Dalaran showed a tank icon). Retail
-        --! assignments only exist in groups; skip to spec-based detection.
-        local grouped = GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0
-        if grouped and (not result or details) then
-            local isMainTank = GetPartyAssignment("MAINTANK", unit)
-            local isMainAssist = GetPartyAssignment("MAINASSIST", unit)
-            if details then
-                details.mainTank = not not isMainTank
-                details.mainAssist = not not isMainAssist
-            end
-            if not result then
-                if isMainTank then
-                    result = "TANK"
-                    roleSource = "MainTank assignment"
-                elseif isMainAssist then
-                    result = "DAMAGER"
-                    roleSource = "MainAssist assignment"
-                end
-            end
+        -- Main tank / main assist markers: diagnostics for /cell debug roles only
+        --! WotLK fix: the leader's marker used to overwrite the talent answer, so a
+        --! protection paladin made main assist was drawn as DPS. Off the hot path now.
+        if details then
+            --! WotLK fix: some cores answer true for a SOLO player, so ask only in a group.
+            local grouped = GetNumRaidMembers() > 0 or GetNumPartyMembers() > 0
+            details.mainTank = grouped and not not GetPartyAssignment("MAINTANK", unit)
+            details.mainAssist = grouped and not not GetPartyAssignment("MAINASSIST", unit)
         end
 
         -- Fallback: talent-based detection via LibGroupInfo (specRole ONLY)
@@ -2321,9 +2314,9 @@ end
 
 --! WotLK fix: class + dominant talent tab -> role, for the Role mode of Layout Auto
 --! Switch. This deliberately does NOT go through Cell.UnitGroupRolesAssigned: that one
---! prefers the role out of GetRaidRosterInfo, which the raid leader can change at any
---! moment, so a storage key built on it would silently repoint the player's saved
---! profile mid-raid. The talent tree is intrinsic - it only changes when the player
+--! can answer from the Dungeon Finder checkbox, or fall back to DAMAGER while talents
+--! are still unknown, so a storage key built on it would silently repoint the player's
+--! saved profile. The talent tree is intrinsic - it only changes when the player
 --! respecs or switches talent group, which is exactly when the profile should change.
 --! Tab order is fixed per class on 3.3.5a, so the index is a stable key.
 --! Known limit: bear and cat share the Feral tab and are indistinguishable from

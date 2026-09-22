@@ -132,6 +132,15 @@ function I.Cooldowns_ShowJump(self, show)
     end
 end
 
+--! custom: same for the debuff-type ring, only border icons carry it
+function I.Cooldowns_ShowTypeBorder(self, show)
+    for i = 1, #self do
+        if self[i].ShowTypeBorder then
+            self[i]:ShowTypeBorder(show)
+        end
+    end
+end
+
 function I.Cooldowns_UpdatePixelPerfect(self)
     P.Repoint(self)
     for i = 1, #self do
@@ -1059,6 +1068,7 @@ function I.CreateRaidDebuffs(parent)
     raidDebuffs.UpdateSize = I.Cooldowns_UpdateSize_WithSpacing
     raidDebuffs.ShowDuration = I.Cooldowns_ShowDuration
     raidDebuffs.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
+    raidDebuffs.ShowTypeBorder = I.Cooldowns_ShowTypeBorder --! custom: per-indicator ring toggle
     raidDebuffs.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
     raidDebuffs.SetFont = I.Cooldowns_SetFont
     raidDebuffs.ShowGlow = RaidDebuffs_ShowGlow
@@ -2529,6 +2539,7 @@ function I.CreateCrowdControls(parent)
     crowdControls.SetOrientation = I.Cooldowns_SetOrientation_WithSpacing
     crowdControls.SetFont = I.Cooldowns_SetFont
     crowdControls.ShowJump = I.Cooldowns_ShowJump --! custom: per-indicator jump toggle
+    crowdControls.ShowTypeBorder = I.Cooldowns_ShowTypeBorder --! custom: per-indicator ring toggle
     crowdControls.UpdatePixelPerfect = I.Cooldowns_UpdatePixelPerfect
 
     for i = 1, 3 do

@@ -767,6 +767,10 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
                 if indicator.ShowJump then
                     indicator:ShowJump(t["showJump"] ~= false)
                 end
+                --! custom: debuff-type ring toggle, nil means shown for the same reason
+                if indicator.ShowTypeBorder then
+                    indicator:ShowTypeBorder(t["showTypeBorder"] ~= false)
+                end
                 -- update duration
                 if type(t["showDuration"]) == "boolean" or type(t["showDuration"]) == "number" then
                     indicator:ShowDuration(t["showDuration"])
@@ -1005,6 +1009,11 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
                 if indicator.ShowJump then
                     indicator:ShowJump(value2)
                 end
+            --! custom: debuff-type ring toggle, same shape as the jump one above
+            elseif value == "showTypeBorder" then
+                if indicator.ShowTypeBorder then
+                    indicator:ShowTypeBorder(value2)
+                end
             elseif value == "showStack" then
                 indicator:ShowStack(value2)
             elseif value == "fadeOut" then
@@ -1096,6 +1105,12 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
             --! custom: update jump animation (see SESSION_NOTES #20)
             if type(value["showJump"]) == "boolean" and indicator.ShowJump then
                 indicator:ShowJump(value["showJump"])
+            end
+            --! custom: update the debuff-type ring. A fresh border icon starts with the
+            --! ring hidden, so an absent key must apply as "shown" and not be skipped -
+            --! that is how a layout saved before this toggle existed still gets it.
+            if indicator.ShowTypeBorder then
+                indicator:ShowTypeBorder(value["showTypeBorder"] ~= false)
             end
             -- update stack
             if type(value["showStack"]) ~= "nil" then
@@ -1637,6 +1652,10 @@ SHOW_JUMP_TOOLTIP = L["The icon hops when the aura is refreshed - its stack grow
     .."|"..L["Nothing else changes, the countdown and the stack count keep working"]
     .."|"..L["Appearance tab holds the same switch for every aura icon at once"]
 
+--! custom: same rules as above - no ":" and no "|" inside these strings.
+local TYPE_BORDER_TOOLTIP = L["A colored ring around the icon - its color is the dispel type (Magic, Curse, Disease, Poison) and black when the aura has no type"]
+    .."|"..L["Only the ring goes away, the icon, the countdown, the stack and the glow keep working"]
+
 indicatorSettings = {
 ["nameText"] = {"enabled", "color-class", "textWidth", "checkbutton:showGroupNumber", "vehicleNamePosition", "position", "frameLevel", "font-noOffset"},
 ["statusText"] = {"enabled", "checkbutton:showTimer", "checkbutton2:showBackground", "statusColors", "statusPosition", "frameLevel", "font-noOffset"},
@@ -1656,6 +1675,8 @@ indicatorSettings = {
     "|TInterface\\WorldStateFrame\\AllianceFlag:18:18|t ", "enabled", "size-square", "position", "frameLevel"},
 ["roleIcon"] = {"enabled", "checkbutton:hideDamager", "size-square", "roleTexture", "position", "frameLevel"},
 ["leaderIcon"] = {"enabled", "checkbutton:hideInCombat", "size-square", "position"},
+--! WotLK feature: main tank / main assist marker. A Texture, so no frameLevel row.
+["partyAssignmentIcon"] = {"enabled", "size-square", "position"},
 ["combatIcon"] = {"enabled", "checkbutton:onlyEnableNotInCombat", "size-square", "position", "frameLevel"},
 ["readyCheckIcon"] = {"enabled", "size-square", "position", "frameLevel"},
 ["playerRaidIcon"] = {"enabled", "size-square", "alpha", "position", "frameLevel"},
@@ -1680,7 +1701,7 @@ indicatorSettings = {
 --! toggle custom indicators already carry (see SESSION_NOTES #20). A stack bump made
 --! the icon hop with no way to switch it off per indicator.
 ["debuffs"] = {"enabled", "checkbutton:dispellableByMe", "debuffBlacklist", "bigDebuffs", "durationVisibility", "checkbutton2:showAnimation", "checkbutton3:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton4:enableBlacklistShortcut:"..DEBUFFS_TOOLTIP2, "checkbutton5:showJump:"..SHOW_JUMP_TOOLTIP, "size-normal-big", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
-["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton3:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["raidDebuffs"] = {"|cffb7b7b7"..L["You can config debuffs in %s"]:format(Cell.GetAccentColorString()..L["Raid Debuffs"].."|r"), "enabled", "checkbutton:onlyShowTopGlow", "durationVisibility", "checkbutton2:showTooltip:"..DEBUFFS_TOOLTIP1, "checkbutton3:showJump:"..SHOW_JUMP_TOOLTIP, "checkbutton4:showTypeBorder:"..TYPE_BORDER_TOOLTIP, "size-border", "num:10", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["targetedSpells"] = {"enabled", "checkbutton:showAllSpells:"..L["Glow is only available to the spells in the list below"], "targetedSpellsList", "targetedSpellsGlow", "size-border", "num:3", "orientation", "position", "frameLevel", "font"},
 --! WotLK fix: the "targetCounter" row is deleted along with the indicator (GAP-081) -
 --! counting the enemies that target a unit was only ever possible off nameplates via
@@ -1688,7 +1709,7 @@ indicatorSettings = {
 ["actions"] = {"|cffb7b7b7"..L["Play animation when the unit uses a specific spell/item. The list is global shared, not layout-specific."], "enabled", "actionsPreview", "actionsList"},
 --! custom: checkbutton:showJump - first free slot here, this row had no checkbutton
 --! at all (see SESSION_NOTES #20).
-["crowdControls"] = {"enabled", "builtInCrowdControls", "customCrowdControls", "durationVisibility", "checkbutton:showJump:"..SHOW_JUMP_TOOLTIP, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
+["crowdControls"] = {"enabled", "builtInCrowdControls", "customCrowdControls", "durationVisibility", "checkbutton:showJump:"..SHOW_JUMP_TOOLTIP, "checkbutton2:showTypeBorder:"..TYPE_BORDER_TOOLTIP, "size-border", "num:3", "orientation", "position", "frameLevel", "font1:stackFont", "font2:durationFont"},
 ["healthThresholds"] = {"enabled", "thresholds", "thickness"},
 --! WotLK fix: checkbutton:showGlow - тумблер мигающей подсветки иконок.
 ["missingBuffs"] = {"|cffb7b7b7"..(L["%s in Utilities must be enabled to make this indicator work."]:format(Cell.GetAccentColorString()..L["Buff Tracker"].."|r")), "enabled", "checkbutton:showGlow:"..L["The icon stays either way"], "size-square", "orientation", "position", "frameLevel"},
@@ -1817,7 +1838,7 @@ local function ShowIndicatorSettings(id)
             --! WotLK fix: showGlow (Missing Buffs) - то же самое: раньше подсветка
             --! была вшита наглухо, значит отсутствие ключа = "включено". Без этого
             --! галка показывала бы OFF, пока индикатор реально мигает.
-            if (setting == "showJump" or setting == "showGlow") and type(dbValue) ~= "boolean" then
+            if (setting == "showJump" or setting == "showGlow" or setting == "showTypeBorder") and type(dbValue) ~= "boolean" then
                 dbValue = true
                 indicatorTable[setting] = true
             end

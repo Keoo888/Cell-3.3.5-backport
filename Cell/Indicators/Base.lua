@@ -730,10 +730,17 @@ local function BorderIcon_SetCooldown(frame, start, duration, debuffType, textur
     --! color. Keep the border shown under a running cooldown - the Cooldown child
     --! draws above the parent's texture layers, so the spiral drains over a colored
     --! ring. SetTexture is memoized: this runs on every aura update.
-    frame.border:Show()
+    --! The color stays tracked while the ring is switched off, so turning it back
+    --! on cannot reveal it in the color of the aura that was showing when it went off.
     if r ~= frame._borderR or g ~= frame._borderG or b ~= frame._borderB then
         frame._borderR, frame._borderG, frame._borderB = r, g, b
         frame.border:SetTexture(r, g, b)
+    end
+    --! nil means shown, so a layout saved before this toggle keeps the ring
+    if frame.showTypeBorder ~= false then
+        frame.border:Show()
+    else
+        frame.border:Hide()
     end
 
     if duration == 0 then
@@ -787,6 +794,17 @@ local function BorderIcon_SetBorder(frame, thickness)
     P.ClearPoints(frame.iconFrame)
     P.Point(frame.iconFrame, "TOPLEFT", frame, "TOPLEFT", thickness, -thickness)
     P.Point(frame.iconFrame, "BOTTOMRIGHT", frame, "BOTTOMRIGHT", -thickness, thickness)
+end
+
+--! custom: switches the debuff-type ring off entirely. The row above only changes
+--! its thickness, so a smaller value never hides it.
+local function BorderIcon_ShowTypeBorder(frame, show)
+    frame.showTypeBorder = show
+    if show then
+        frame.border:Show()
+    else
+        frame.border:Hide()
+    end
 end
 
 local function BorderIcon_ShowDuration(frame, show)
@@ -860,6 +878,7 @@ function I.CreateAura_BorderIcon(name, parent, borderSize)
     frame.SetCooldown = BorderIcon_SetCooldown
     frame.ShowDuration = BorderIcon_ShowDuration
     frame.ShowJump = Shared_ShowJump
+    frame.ShowTypeBorder = BorderIcon_ShowTypeBorder
     frame.UpdatePixelPerfect = BorderIcon_UpdatePixelPerfect
 
     return frame

@@ -9,7 +9,9 @@ local addonName, Cell = ...
 --! out by Revise.lua.
 --! WotLK feature: 29 - "Cluster", the predictive AoE-cluster counter (Indicators/Cluster.lua).
 --! WotLK feature: 30 - "Incoming Healers", the incoming-heal counter (Indicators/IncomingHealers.lua).
-Cell.defaults.builtIns = 30
+--! WotLK feature: 31 - "Party Assignment Icon", the leader's main tank / main assist marker.
+--! Appended, not inserted at upstream's index 8 - inserting renumbers every saved layout.
+Cell.defaults.builtIns = 31
 
 Cell.defaults.indicatorIndices = {
     ["nameText"] = 1,
@@ -42,6 +44,7 @@ Cell.defaults.indicatorIndices = {
     ["missingBuffs"] = 28,
     ["cluster"] = 29,
     ["incomingHealers"] = 30,
+    ["partyAssignmentIcon"] = 31,
 }
 
 Cell.defaults.layout = {
@@ -489,6 +492,8 @@ Cell.defaults.layout = {
             ["showTooltip"] = false,
             --! custom: jump (refresh) animation, on as before so nothing changes silently
             ["showJump"] = true,
+            --! custom: debuff-type ring around the icon, on as before
+            ["showTypeBorder"] = true,
         }, -- 24
         {
             ["name"] = "Targeted Spells",
@@ -517,6 +522,8 @@ Cell.defaults.layout = {
             ["showDuration"] = false,
             --! custom: jump (refresh) animation, on as before so nothing changes silently
             ["showJump"] = true,
+            --! custom: debuff-type ring around the icon, on as before
+            ["showTypeBorder"] = true,
             ["font"] = {
                 {"Cell ".._G.DEFAULT, 11, "Outline", false, "TOPRIGHT", 2, 1, {1, 1, 1}},
                 {"Cell ".._G.DEFAULT, 11, "Outline", false, "BOTTOMRIGHT", 2, -1, {1, 1, 1}},
@@ -578,6 +585,17 @@ Cell.defaults.layout = {
             },
             ["countHoTs"] = false,
         }, -- 30
+        --! WotLK feature: the leader's main tank / main assist marker, its own icon.
+        --! A Texture, so no frameLevel key. Off by default like the two above; position
+        --! continues the roleIcon (0,0) / leaderIcon (1,-10) stack instead of overlapping it.
+        {
+            ["name"] = "Party Assignment Icon",
+            ["indicatorName"] = "partyAssignmentIcon",
+            ["type"] = "built-in",
+            ["enabled"] = false,
+            ["position"] = {"TOPLEFT", "button", "TOPLEFT", 1, -20},
+            ["size"] = {11, 11},
+        }, -- 31
     },
 }
 

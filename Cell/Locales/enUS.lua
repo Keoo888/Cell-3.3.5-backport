@@ -47,6 +47,9 @@ select(2, ...).L = setmetatable({
     --! несовпадении этих двух значений подпись оставалась на языке клиента, а вся панель
     --! вокруг - на выбранном. Ключ живёт в файлах локалей, как showGlow и hideForTanks.
     ["showJump"] = "Show refresh (jump) animation",
+    --! custom: switch for the colored ring BorderIcon_SetCooldown draws around a
+    --! border icon. Same reason as above - without the row the label shows the key.
+    ["showTypeBorder"] = "Show debuff-type border",
     --! WotLK feature: cluster counter, see Indicators/Cluster.lua.
     ["lowHealthOnly"] = "Only count wounded allies",
     --! WotLK feature: incoming-heal counter, see Indicators/IncomingHealers.lua.

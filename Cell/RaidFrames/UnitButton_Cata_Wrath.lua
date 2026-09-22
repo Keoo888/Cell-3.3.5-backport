@@ -579,6 +579,11 @@ local function HandleIndicators(b)
         if indicator.ShowJump then
             indicator:ShowJump(t["showJump"] ~= false)
         end
+        --! custom: debuff-type ring toggle. nil means shown, so it is applied as true
+        --! rather than skipped - same reason as ShowJump right above.
+        if indicator.ShowTypeBorder then
+            indicator:ShowTypeBorder(t["showTypeBorder"] ~= false)
+        end
         -- update duration
         if type(t["showDuration"]) == "boolean" or type(t["showDuration"]) == "number" then
             indicator:ShowDuration(t["showDuration"])
@@ -923,6 +928,10 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
             elseif indicatorName == "leaderIcon" then
                 F.IterateAllUnitButtons(function(b)
                     UnitButton_UpdateLeader(b)
+                end, true)
+            elseif indicatorName == "partyAssignmentIcon" then
+                F.IterateAllUnitButtons(function(b)
+                    B.UpdateAssignment(b)
                 end, true)
             elseif indicatorName == "playerRaidIcon" then
                 F.IterateAllUnitButtons(function(b)
@@ -1312,6 +1321,15 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
                         indicator:ShowJump(value2)
                     end
                 end, true)
+            --! custom: debuff-type ring toggle. Show/Hide happens on the texture
+            --! itself, so already-shown icons change without an aura re-scan.
+            elseif value == "showTypeBorder" then
+                F.IterateAllUnitButtons(function(b)
+                    local indicator = b.indicators[indicatorName]
+                    if indicator and indicator.ShowTypeBorder then
+                        indicator:ShowTypeBorder(value2)
+                    end
+                end, true)
             elseif value == "trackByName" then
                 F.IterateAllUnitButtons(function(b)
                     UnitButton_UpdateAuras(b)
@@ -1421,6 +1439,10 @@ local function UpdateIndicators(layout, indicatorName, setting, value, value2)
                 --! custom: update jump animation (see SESSION_NOTES #20)
                 if type(value["showJump"]) == "boolean" and indicator.ShowJump then
                     indicator:ShowJump(value["showJump"])
+                end
+                --! custom: debuff-type ring, absent key means shown (see HandleIndicators)
+                if indicator.ShowTypeBorder then
+                    indicator:ShowTypeBorder(value["showTypeBorder"] ~= false)
                 end
                 -- update showDuration
                 if type(value["showDuration"]) ~= "nil" then
@@ -2535,6 +2557,22 @@ UnitButton_UpdateLeader = function(self, event)
         leaderIcon:SetIcon(isLeader, isAssistant)
     else
         leaderIcon:Hide()
+    end
+end
+
+--! WotLK feature: the leader's main tank / main assist marker, its own icon. On B and
+--! not in a local - the main chunk is at the Lua 5.1 ceiling of 200 locals. Needs no
+--! event: RAID_ROSTER_UPDATE covers assignment changes and already forces a full update.
+function B.UpdateAssignment(self)
+    local unit = self.states.unit
+    if not unit then return end
+
+    local partyAssignmentIcon = self.indicators.partyAssignmentIcon
+
+    if enabledIndicators["partyAssignmentIcon"] then
+        partyAssignmentIcon:UpdateAssignment(unit)
+    else
+        partyAssignmentIcon:Hide()
     end
 end
 
@@ -4155,6 +4193,7 @@ UnitButton_UpdateAll = function(self)
     UnitButton_UpdateInRange(self)
     UnitButton_UpdateRole(self)
     UnitButton_UpdateLeader(self)
+    B.UpdateAssignment(self) --! WotLK feature: main tank / main assist marker
     UnitButton_UpdateReadyCheck(self)
     UnitButton_UpdateThreat(self)
     UnitButton_UpdateThreatBar(self)
@@ -5939,6 +5978,7 @@ function CellUnitButton_OnLoad(button)
     I.CreateStatusIcon(button)
     I.CreateRoleIcon(button)
     I.CreateLeaderIcon(button)
+    I.CreatePartyAssignmentIcon(button) --! WotLK feature: main tank / main assist marker
     I.CreateCombatIcon(button)
     I.CreateReadyCheckIcon(button)
     I.CreateAggroBlink(button)

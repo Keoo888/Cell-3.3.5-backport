@@ -603,6 +603,8 @@ L["showGlow"] = "Мигающая подсветка"
 --! локаль КЛИЕНТА и не знала про собственный переключатель языка Cell
 --! (CellDB.general.locale), поэтому одна подпись оставалась не в тон остальной панели.
 L["showJump"] = "Анимация обновления (прыжок)"
+--! custom: тумблер цветного кольца вокруг иконки (Indicators/Base.lua, BorderIcon).
+L["showTypeBorder"] = "Показывать рамку по типу дебаффа"
 --! WotLK fix: tooltip for the same toggle - the checkbox label alone does not say
 --! what "refresh" means here, and the tester asked for an explanation on hover.
 --! No ":" in these strings - see the SHOW_JUMP_TOOLTIP comment in Indicators.lua.
@@ -610,6 +612,9 @@ L["The icon hops when the aura is refreshed - its stack grows or its duration st
 L["Nothing else changes, the countdown and the stack count keep working"] = "Больше ничего не меняется, отсчёт и число стаков работают как раньше"
 L["Appearance tab holds the same switch for every aura icon at once"] = "Такой же выключатель сразу для всех иконок аур - во «Внешнем виде»"
 L["The icon stays either way"] = "Иконка остаётся в любом случае"
+--! custom: подписи той же галки про цветное кольцо, см. TYPE_BORDER_TOOLTIP в Indicators.lua.
+L["A colored ring around the icon - its color is the dispel type (Magic, Curse, Disease, Poison) and black when the aura has no type"] = "Цветное кольцо вокруг иконки - его цвет соответствует типу дебаффа (магия, проклятие, болезнь, яд), чёрное если типа нет"
+L["Only the ring goes away, the icon, the countdown, the stack and the glow keep working"] = "Исчезает только кольцо - иконка, отсчёт, число стаков и свечение работают как раньше"
 --! WotLK fix: настройки аггро-индикаторов, см. UnitButton_UpdateThreat.
 L["hideForTanks"] = "Не показывать танкам"
 L["A tank holds the mob by design"] = "Танк держит моба по должности - на 25ппл это половина мигающих рамок, которые ни о чём не сообщают"

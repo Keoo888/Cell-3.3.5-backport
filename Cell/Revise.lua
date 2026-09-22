@@ -2829,17 +2829,17 @@ function F.Revise()
 
     --! WotLK feature: add the records of the new indicators to already-saved layouts.
     --! Mirror image of the block above and mandatory for the same reason: the stock
-    --! repair pass never fires again with the toc version frozen, and builtIns is now 30
+    --! repair pass never fires again with the toc version frozen, and builtIns is now 31
     --! while an old layout holds 28 built-ins - the custom-indicator loop in
     --! Custom_Classic.lua would then start too early and read the player's own
     --! indicators as built-ins. Each record is inserted at its own index so the customs
     --! that follow keep their order; a layout that already has one is skipped, which
-    --! also covers two profiles welded to one shared indicators table. Both defaults are
-    --! disabled, so nothing new appears on anyone's frames by itself.
+    --! also covers two profiles welded to one shared indicators table. All three defaults
+    --! are disabled, so nothing new appears on anyone's frames by itself.
     --! Idempotent, runs every load. In index order: inserting 29 before 30 keeps 30 at
     --! its own index.
     if type(CellDB["layouts"]) == "table" then
-        local added = {"cluster", "incomingHealers"}
+        local added = {"cluster", "incomingHealers", "partyAssignmentIcon"}
         for _, indicatorName in ipairs(added) do
             local index = Cell.defaults.indicatorIndices[indicatorName]
             local default = Cell.defaults.layout.indicators[index]
