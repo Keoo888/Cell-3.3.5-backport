@@ -625,6 +625,12 @@ function eventFrame:ADDON_LOADED(arg1)
                 ["default"] = F.Copy(Cell.defaults.layout)
             }
         end
+        --! WotLK fix: the whole-table check above passes a partly overwritten DB where
+        --! "layouts" exists without "default". Validation below then sends every layout
+        --! to "default", currentLayoutTable becomes nil and every indicator reads nil.
+        if type(CellDB["layouts"]["default"]) ~= "table" then
+            CellDB["layouts"]["default"] = F.Copy(Cell.defaults.layout)
+        end
 
         -- layoutAutoSwitch -----------------------------------------------------------------------
         if type(CellCharacterDB["layoutAutoSwitch"]) ~= "table" then

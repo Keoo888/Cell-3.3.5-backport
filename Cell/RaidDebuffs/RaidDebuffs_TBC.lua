@@ -624,6 +624,8 @@ local debuffs = {
             30639, -- Carnivorous Bite
             6713, -- Disarm
             30615, -- Fear
+            16244, -- Demoralizing Shout
+            26141, -- Hamstring
         },
         [527] = { -- 巡视者加戈玛
             36814, -- Mortal Wound
@@ -631,6 +633,7 @@ local debuffs = {
         [528] = { -- 无疤者奥摩尔
             37566, -- Bane of Treachery
             30695, -- Treacherous Aura
+            35748, -- Drain Life
         },
         [529] = { -- 传令官瓦兹德
             39427, -- Bellowing Roar
@@ -714,8 +717,16 @@ local debuffs = {
             17883, -- Immolate
             34984, -- Psychic Horror
             36872, -- Deadly Poison
+            6754, -- Slap!
+            16172, -- Head Crack
+            21096, -- Blizzard
+            31551, -- Piercing Jab
+            31555, -- Decayed Intellect
+            34672, -- Magma Splash
+            35760, -- Decayed Strength
         },
         [570] = { -- 背叛者门努
+            31983, -- Earthgrab
         },
         [571] = { -- 巨钳鲁克玛尔
             38801, -- Grievous Wound
@@ -723,6 +734,7 @@ local debuffs = {
         },
         [572] = { -- 夸格米拉
             34780, -- Poison Bolt Volley
+            38153, -- Acid Spray
         },
     },
 
@@ -737,6 +749,7 @@ local debuffs = {
             34984, -- Psychic Horror
             31407, -- Viper Sting
             31410, -- Coral Cut
+            31427, -- Allergies
         },
         [576] = { -- 霍加尔芬
             34971, -- Frenzy (Claw)
@@ -749,6 +762,7 @@ local debuffs = {
         [578] = { -- 沼地领主穆塞雷克
             34974, -- Multi-Shot
             31429, -- Echoing Roar
+            31932, -- Freezing Trap Effect
         },
         [579] = { -- 黑色阔步者
             31715, -- Static Charge
@@ -1091,11 +1105,13 @@ local debuffs = {
             34969, -- Poison
             30832, -- Kidney Shot
             6726, -- Silence
+            31865, -- Seduction
         },
         [555] = { -- 制造者
             30923, -- Domination
             20276, -- Knockdown
             25772, -- Mental Domination
+            38153, -- Acid Spray
         },
         [556] = { -- 布洛戈克
             30916, -- Poison Cloud

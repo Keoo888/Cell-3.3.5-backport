@@ -1456,11 +1456,9 @@ local function CreateListPane()
             local indicatorType, indicatorAuraType = self.dropdown1:GetSelected(), self.dropdown2:GetSelected()
 
             local last = #currentLayoutTable["indicators"]
-            local index = currentLayoutTable["indicators"][last]["indicatorName"]:match("%d+")
-            index = index and tonumber(index) or 0
-            index = index + 1
-
-            local indicatorName = "indicator" .. index
+            --! WotLK fix: the name came from the LAST list entry, which after a delete is
+            --! no longer the highest - see F.GetNextCustomIndicatorName.
+            local indicatorName = F.GetNextCustomIndicatorName(currentLayoutTable["indicators"])
             last = last + 1
 
             tinsert(currentLayoutTable["indicators"], I.GetDefaultCustomIndicatorTable(name, indicatorName, indicatorType, indicatorAuraType))

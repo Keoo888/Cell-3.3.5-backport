@@ -482,15 +482,9 @@ function F.FirstRun()
         local currentLayoutTable = Cell.vars.currentLayoutTable
 
         local last = #currentLayoutTable["indicators"]
-        --! WotLK fix: было без local - имя нового индикатора писалось в глобал
-        --! _G.indicatorName. Cell не владеет глобалами. Значение нужно только внутри
-        --! этого обработчика (ниже в tinsert и в Cell.Fire).
-        local indicatorName
-        if currentLayoutTable["indicators"][last]["type"] == "built-in" then
-            indicatorName = "indicator1"
-        else
-            indicatorName = "indicator"..(tonumber(strmatch(currentLayoutTable["indicators"][last]["indicatorName"], "%d+"))+1)
-        end
+        --! WotLK fix: was global _G.indicatorName, and the name came from the LAST list
+        --! entry - see F.GetNextCustomIndicatorName.
+        local indicatorName = F.GetNextCustomIndicatorName(currentLayoutTable["indicators"])
 
         tinsert(currentLayoutTable["indicators"], {
             ["name"] = "Healers",

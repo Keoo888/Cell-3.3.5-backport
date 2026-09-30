@@ -322,6 +322,18 @@ local SetBindingClicks
             wrapFrame:WrapScript(b, "OnHide", [[
                 if mouseoverbutton == self then mouseoverbutton = nil end
             ]])
+
+            --! WotLK fix: the secure header re-points "unit" while the cursor stands
+            --! still, and _onenter does not fire again - bindings and the @unit
+            --! rewrite stayed on the previous player. Re-run _onenter in place.
+            wrapFrame:WrapScript(b, "OnAttributeChanged", [[
+                if name == "unit" and value and self:IsVisible() and self:IsUnderMouse() then
+                    local onenter = self:GetAttribute("_onenter")
+                    if onenter and onenter ~= "" then
+                        control:RunFor(self, onenter)
+                    end
+                end
+            ]])
         end
 
         --! NOTE: if another frame shows in front of b, _onleave will NOT trigger. Use WrapScript to solve this issue.

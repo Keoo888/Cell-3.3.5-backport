@@ -2963,11 +2963,17 @@ end
 --! из 200 (см. заметку у объявлений), а решение нужно ещё и снаружи - /cell debug
 --! threat печатает вердикт по тем же данным, что и рамки.
 function B.GetThreatMobUnit()
+    local mob
     if UnitExists("target") and not UnitIsDead("target") and UnitCanAttack("player", "target") then
-        return "target"
+        mob = "target"
+    elseif UnitExists("targettarget") and not UnitIsDead("targettarget") and UnitCanAttack("player", "targettarget") then
+        mob = "targettarget"
     end
-    if UnitExists("targettarget") and not UnitIsDead("targettarget") and UnitCanAttack("player", "targettarget") then
-        return "targettarget"
+    --! WotLK fix: the pair query is answered only if THE PLAYER has threat on that NPC
+    --! (codex, UnitThreatSituation), and targettarget is a mob somebody else picked - so
+    --! nobody lit up at all. No data means fall back to the per-unit global form.
+    if mob and UnitThreatSituation("player", mob) then
+        return mob
     end
 end
 

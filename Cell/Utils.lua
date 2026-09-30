@@ -1206,6 +1206,22 @@ function F.FilterInvalidSpells(t)
     end
 end
 
+--! WotLK fix: four call sites derived the next name from the LAST entry of the list.
+--! indicatorName is a table key (b.indicators[name]), and after a tremove the last
+--! entry is no longer the highest, so a new indicator could reuse a live name.
+function F.GetNextCustomIndicatorName(indicators)
+    local highest = 0
+    for _, t in pairs(indicators) do
+        local index = type(t) == "table" and type(t["indicatorName"]) == "string"
+            and strmatch(t["indicatorName"], "^indicator(%d+)$")
+        index = index and tonumber(index)
+        if index and index > highest then
+            highest = index
+        end
+    end
+    return "indicator"..(highest + 1), highest + 1
+end
+
 -------------------------------------------------
 -- general
 -------------------------------------------------

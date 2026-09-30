@@ -997,6 +997,14 @@ local function ThreatSnapshot()
         threshold >= 130 and "верх ползунка (130) - только когда моба уже бьёт этот юнит"
             or format("порог %d%%", threshold),
         hideTanks and "скрыты" or "показываем"))
+    --! WotLK fix: "моба нет" бывает по двум причинам - враждебной цели нет вовсе, или
+    --! она есть, но у ИГРОКА нет на ней угрозы, и тогда клиент не отдаёт парный запрос
+    --! никому (кодекс, UnitThreatSituation). Печатаем сам зонд, чтобы не гадать.
+    if not mob then
+        Say(format("  причина: угроза игрока на target=%s, на targettarget=%s",
+            UnitExists("target") and tostring(UnitThreatSituation("player", "target")) or "нет цели",
+            UnitExists("targettarget") and tostring(UnitThreatSituation("player", "targettarget")) or "нет цели"))
+    end
     Say("unit name | anyMob | vsMob | detailed(isTanking/status/scaled/raw) | role | вердикт")
 
     for i = 1, #units do

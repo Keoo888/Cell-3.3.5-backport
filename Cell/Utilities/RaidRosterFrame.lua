@@ -381,6 +381,28 @@ local function FindDropTarget(source)
     end
 end
 
+--! WotLK fix: one walk per frame while a drag runs, instead of all 40 tiles polling
+--! IsMouseOver every frame forever. Highlights exactly the tile FindDropTarget would
+--! pick, so the highlight and the drop can no longer disagree about overlapping rows.
+local dragHighlight
+
+local function ClearDragHighlight()
+    if dragHighlight then
+        dragHighlight:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
+        dragHighlight = nil
+    end
+end
+
+local function UpdateDragHighlight(source)
+    local target = FindDropTarget(source)
+    if target == dragHighlight then return end
+    ClearDragHighlight()
+    if target then
+        dragHighlight = target
+        target:SetBackdropColor(target.color[1], target.color[2], target.color[3], 0.2)
+    end
+end
+
 --! WotLK fix: the body below is what used to live in the unreachable OnEvent
 --! handler. Nothing about it is retail-only, it simply had no trigger.
 local function PerformDrop(source, target)
@@ -458,6 +480,9 @@ local function CreateRaidRosterGrid(parent, index)
         grid:SetBackdropColor(0.1, 0.1, 0.1, 0.9)
         grid.isMoving = true
         movingGrid = grid
+        --! WotLK fix: drop-target highlight lives here now - one walk per frame while
+        --! the drag runs, and nothing at all the rest of the time.
+        grid:SetScript("OnUpdate", UpdateDragHighlight)
     end)
     --! WotLK fix: the drop is resolved and performed here now, not in the OnEvent
     --! handler that used to sit below and never ran. Blizzard's own raid window does
@@ -468,6 +493,8 @@ local function CreateRaidRosterGrid(parent, index)
     --! in-flight drag without moving anybody (the roster it was dragging against
     --! has just been rebuilt, so a drop there would land on stale tiles).
     grid:SetScript("OnDragStop", function(self, noDrop)
+        grid:SetScript("OnUpdate", nil)
+        ClearDragHighlight()
         grid:SetFrameLevel(7)
         grid:StopMovingOrSizing()
         grid:ClearAllPoints()
@@ -494,15 +521,17 @@ local function CreateRaidRosterGrid(parent, index)
         end
     end)
 
-    -- onupdate
-    grid:SetScript("OnUpdate", function()
-        if not grid.isMoving then
-            if grid:IsMouseOver() then
-                grid:SetBackdropColor(grid.color[1], grid.color[2], grid.color[3], 0.2)
-            else
-                grid:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
-            end
-        end
+    -- hover
+    --! WotLK fix: the hover highlight ran from a per-tile OnUpdate - 40 IsMouseOver
+    --! calls every frame while the window was open. Empty tiles keep their mouse off
+    --! (grid:Reset), so their only informative highlight is the drop target above.
+    grid:SetScript("OnEnter", function(self)
+        if movingGrid then return end
+        self:SetBackdropColor(self.color[1], self.color[2], self.color[3], 0.2)
+    end)
+    grid:SetScript("OnLeave", function(self)
+        if self.isMoving then return end
+        self:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
     end)
 
     function grid:Update()
@@ -545,6 +574,9 @@ local function CreateRaidRosterGrid(parent, index)
         grid:SetPoint(unpack(grid.point1))
         grid:SetPoint(unpack(grid.point2))
 
+        --! WotLK fix: the old per-tile OnUpdate repainted this every frame, so nobody
+        --! had to undo a highlight. Turning the mouse off may not fire OnLeave.
+        grid:SetBackdropColor(0.1, 0.1, 0.1, 0.5)
         grid:EnableMouse(false)
     end
 
@@ -586,6 +618,11 @@ local function CreateRaidRosterGrid(parent, index)
         -- update
         grid:Update()
         grid:EnableMouse(true)
+        --! WotLK fix: OnEnter cannot have fired while this tile had its mouse off, so
+        --! a roster rebuild under a resting cursor would leave it unlit. One call.
+        if not movingGrid and grid:IsMouseOver() then
+            grid:SetBackdropColor(grid.color[1], grid.color[2], grid.color[3], 0.2)
+        end
     end
 
     return grid

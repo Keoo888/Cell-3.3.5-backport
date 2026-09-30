@@ -54,9 +54,10 @@ local function CreateIndicatorsImportFrame()
         local popup = Cell.CreateConfirmPopup(Cell.frames.indicatorsTab, 250, text, function(self)
             local toLayoutTable = CellDB["layouts"][toLayout]
             -- last custom index
-            local lastIndex
-            local last = #toLayoutTable["indicators"]
-            lastIndex = last - Cell.defaults.builtIns
+            --! WotLK fix: this was the COUNT of customs, so after a delete the next name
+            --! landed on a live one - see F.GetNextCustomIndicatorName.
+            local _, nextIndex = F.GetNextCustomIndicatorName(toLayoutTable["indicators"])
+            local lastIndex = nextIndex - 1
 
             -- local toLayoutTable = { ["indicators"] = {} }
 

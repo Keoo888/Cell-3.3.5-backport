@@ -785,6 +785,7 @@ local debuffs = {
             48278, -- 麻痹
             48277, -- 仪祭打击
             48267, -- Ritual Preparation
+            59408, -- Shadows in the Dark
         },
         [642] = { -- 戈托克·苍蹄
             59263, -- 重伤
@@ -943,6 +944,7 @@ local debuffs = {
             58967, -- 淬毒长矛
             58992, -- 震耳咆哮
             6713, -- Disarm
+            58969, -- Head Crack
         },
         [592] = { -- 斯拉德兰
             55126, -- 毒蛇裹体
@@ -1108,6 +1110,7 @@ local debuffs = {
         [615] = { -- 布隆亚姆
             68950, -- 恐惧
             68921, -- 灵魂风暴
+            68839, -- Corrupt Soul
         },
         [616] = { -- 噬魂者
         },
@@ -1128,6 +1131,8 @@ local debuffs = {
             30849, -- Spell Lock
             58532, -- Frostbolt Volley
             58534, -- Deep Freeze
+            58461, -- Sunder Armor
+            58462, -- Arcane Blast
         },
         [626] = { -- 埃雷克姆
             39215, -- 龟裂创伤
@@ -1190,6 +1195,7 @@ local debuffs = {
             59349, -- 投掷
             59350, -- 破甲
             -59431, -- 吸血虫群
+            59360, -- Poison Bolt Volley
         },
     },
 
@@ -1289,6 +1295,7 @@ local debuffs = {
             59971, -- 火焰之雨
             -49356, -- 腐烂
             -53463, -- 恢复常态
+            52509, -- Gift of Tharon'ja
         },
     },
 
@@ -1332,6 +1339,7 @@ local debuffs = {
         },
         [600] = { -- 洛肯
             59835, -- 闪电新星
+            52921, -- Arc Lightning
         },
     },
 
@@ -1395,8 +1403,10 @@ local debuffs = {
             32323, -- Charge
             16102, -- Flamestrike
             50732, -- Water Tomb
+            59280, -- Frostbolt
         },
         [622] = { -- 审讯者达库斯
+            59370, -- Thundering Stomp
         },
         [623] = { -- 瓦尔洛斯·云击
             59371, -- 魔法增效

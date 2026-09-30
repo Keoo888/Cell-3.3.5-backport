@@ -63,8 +63,10 @@ local function CreateIndicatorsCopyFrame()
     copyBtn:SetPoint("BOTTOMLEFT", 5, 5)
     copyBtn:SetEnabled(false)
     copyBtn:SetScript("OnClick", function()
-        local last = #CellDB["layouts"][to]["indicators"]
-        last = tonumber(string.match(CellDB["layouts"][to]["indicators"][last]["indicatorName"], "%d+")) or last
+        --! WotLK fix: the name came from the LAST list entry, which after a delete is no
+        --! longer the highest - see F.GetNextCustomIndicatorName.
+        local _, nextIndex = F.GetNextCustomIndicatorName(CellDB["layouts"][to]["indicators"])
+        local last = nextIndex - 1
 
         for i in pairs(selectedIndicators) do
             if i <= Cell.defaults.builtIns then -- built-in

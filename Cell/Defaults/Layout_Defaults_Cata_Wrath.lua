@@ -333,7 +333,10 @@ Cell.defaults.layout = {
             ["name"] = "Aggro (border)",
             ["indicatorName"] = "aggroBorder",
             ["type"] = "built-in",
-            ["enabled"] = false,
+            --! WotLK fix: on by default (owner, 30.09). The blink alone is an 11x11
+            --! square in the corner, on top of the role icon - testers reported they
+            --! could not see who had aggro. Existing profiles keep their own value.
+            ["enabled"] = true,
             ["frameLevel"] = 3,
             ["thickness"] = 2,
             --! WotLK fix: свой порог и свой "не показывать танков" - рамка и мигание
