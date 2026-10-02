@@ -323,16 +323,17 @@ local SetBindingClicks
                 if mouseoverbutton == self then mouseoverbutton = nil end
             ]])
 
-            --! WotLK fix: reverted (3e7ce52). Re-running _onenter when the header
-            --! re-points "unit" under a resting cursor is wanted, but wrapping this
-            --! script here breaks the party frame: ForceSyncPartyButtons calls
-            --! button:GetScript("OnAttributeChanged")(button, "unit", unit) directly,
-            --! and after a WrapScript that returns Blizzard's secure dispatcher, which
-            --! cannot be entered from insecure code - RestrictedExecution.lua:816
-            --! "Cannot call restricted closure from insecure code". The error aborted
-            --! PartyFrame_UpdateLayout before its anchor block, so the party frame
-            --! stopped re-anchoring at all. Re-adding this needs that call changed
-            --! first: invoke Cell's own handler, never whatever GetScript answers.
+            --! WotLK fix: the header re-points "unit" under a resting cursor and
+            --! _onenter never fires again, so bindings stay on the previous player.
+            --! Re-run it here. Nothing may GetScript this script afterwards.
+            wrapFrame:WrapScript(b, "OnAttributeChanged", [[
+                if name == "unit" and value and self:IsVisible() and self:IsUnderMouse() then
+                    local onenter = self:GetAttribute("_onenter")
+                    if onenter and onenter ~= "" then
+                        control:RunFor(self, onenter)
+                    end
+                end
+            ]])
         end
 
         --! NOTE: if another frame shows in front of b, _onleave will NOT trigger. Use WrapScript to solve this issue.

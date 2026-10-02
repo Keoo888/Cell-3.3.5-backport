@@ -139,19 +139,23 @@ local function UpdateButtonOrder(layout)
 end
 
 -- Ensure buttons know their unit attributes (OnAttributeChanged only fires on changes)
+--! WotLK fix: call Cell's own handler by name. GetScript answers Blizzard's
+--! secure dispatcher once click-casting wraps this script, and entering it
+--! from insecure Lua raises "Cannot call restricted closure".
 local function ForceSyncPartyButtons()
+    local OnAttributeChanged = Cell.bFuncs and Cell.bFuncs.OnAttributeChanged
     for i = 1, 5 do
         local button = manualButtons[i]
         if button then
             local unit = button:GetAttribute("unit")
-            if unit and button:GetScript("OnAttributeChanged") then
-                button:GetScript("OnAttributeChanged")(button, "unit", unit)
+            if unit and OnAttributeChanged then
+                OnAttributeChanged(button, "unit", unit)
             end
 
             if button.petButton then
                 local petUnit = button.petButton:GetAttribute("unit")
-                if petUnit and button.petButton:GetScript("OnAttributeChanged") then
-                    button.petButton:GetScript("OnAttributeChanged")(button.petButton, "unit", petUnit)
+                if petUnit and OnAttributeChanged then
+                    OnAttributeChanged(button.petButton, "unit", petUnit)
                 end
             end
 

@@ -77,7 +77,6 @@ end
 
 local function StartMove()
     if isMoving then return end
-    if InCombatLockdown() then return end
     --! Honour the "lock" option here too. Locking used to work by clearing
     --! RegisterForDrag, which no longer covers the OnMouseDown path.
     if CellDB["general"]["locked"] then return end
@@ -87,22 +86,16 @@ local function StartMove()
     anchorFrame:SetUserPlaced(false)
 end
 
-local pendingStopMove
+--! WotLK fix: dragging stays available in combat. CellAnchorFrame does inherit
+--! protection from CellMainFrame, but StartMoving/StopMovingOrSizing are not
+--! combat-protected on 3.3.5a - Cell itself drags this very frame unguarded from
+--! Layouts.lua and BuffTracker, and no blocked-action report ever came from it.
+--! The lockdown branch that used to defer the stop left the anchor glued to the
+--! cursor for the rest of the fight when the grab landed inside combat.
 local function StopMove()
-    if not isMoving and not pendingStopMove then return end
+    if not isMoving then return end
     isMoving = false
 
-    --! WotLK fix: CellAnchorFrame inherits protection from CellMainFrame, its
-    --! SecureFrameTemplate parent. StopMovingOrSizing therefore cannot be
-    --! called after PLAYER_REGEN_DISABLED. Remember the stop request and
-    --! complete it immediately on PLAYER_REGEN_ENABLED instead of tainting or
-    --! leaving the protected frame permanently attached to the cursor.
-    if InCombatLockdown() then
-        pendingStopMove = true
-        return
-    end
-
-    pendingStopMove = nil
     anchorFrame:StopMovingOrSizing()
 
     --! Only treat this as a drag if the anchor really moved. A plain click keeps
@@ -118,18 +111,6 @@ local function StopMove()
         P.SavePosition(anchorFrame, Cell.vars.currentLayoutTable["main"]["position"])
     end
 end
-
-anchorFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-anchorFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-anchorFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_REGEN_DISABLED" then
-        if isMoving then
-            StopMove()
-        end
-    elseif pendingStopMove then
-        StopMove()
-    end
-end)
 
 local function RegisterButtonEvents(frame)
     -- frame:RegisterForDrag("LeftButton")

@@ -2436,73 +2436,35 @@ function F.CreateMoverOverlay(frame, getPositionTable)
     return overlay
 end
 
---! WotLK fix: the pet, friendly-NPC and spotlight anchors dragged straight from
---! OnDragStart/OnDragStop with no combat guard. All three inherit protection from
---! a secure parent (CellPetFrame and CellSpotlightFrame are secure templates,
---! CellSeparateNPCFrameAnchor hangs off CellMainFrame), so StopMovingOrSizing on
---! them is forbidden once PLAYER_REGEN_DISABLED has fired: grabbing an anchor as
---! combat starts left the frame stuck to the cursor for the whole fight, and the
---! layout could not be put back until it ended. CellAnchorFrame already solved
---! this in MainFrame.lua; this is the same shape, shared instead of copied.
---! One watcher for all registrants - three private event frames polling the same
---! two events would be three times the work for one answer.
-local combatDragWatcher
-local combatDragStops = {}
-
---! Both events go through the same call: entering combat mid-drag records the
---! pending stop (StopMove sees the lockdown), leaving combat completes it.
---! Anchors that are neither moving nor pending return immediately.
-local function RunPendingCombatDragStops()
-    for stop in pairs(combatDragStops) do
-        stop()
-    end
-end
-
----@param anchor table protected frame that actually moves
+---@param anchor table frame that actually moves
 ---@param dragger table mouse-enabled frame on top of it (RegisterForDrag lives there)
 ---@param getPositionTable function getter, not the table: /cell reset position
 ---! replaces the layout table, and a reference captured at load time would be
 ---! written into an orphaned copy afterwards.
-function F.ApplyCombatSafeDrag(anchor, dragger, getPositionTable)
+--! WotLK fix: shared drag wiring for the pet, friendly-NPC and spotlight anchors
+--! so the three do not carry three copies of the same five lines. No combat
+--! guard: StartMoving/StopMovingOrSizing are not protected on 3.3.5a.
+function F.ApplyAnchorDrag(anchor, dragger, getPositionTable)
     local P = Cell.pixelPerfectFuncs
-    local isMoving, pendingStop
+    local isMoving
 
-    local function StopMove()
-        if not isMoving and not pendingStop then return end
+    dragger:SetScript("OnDragStart", function()
+        if isMoving then return end
+        isMoving = true
+        anchor:StartMoving()
+        anchor:SetUserPlaced(false)
+    end)
+
+    dragger:SetScript("OnDragStop", function()
+        if not isMoving then return end
         isMoving = nil
-
-        if InCombatLockdown() then
-            --! Remember the request and finish it on PLAYER_REGEN_ENABLED instead
-            --! of tainting the protected frame or leaving it on the cursor.
-            pendingStop = true
-            return
-        end
-
-        pendingStop = nil
         anchor:StopMovingOrSizing()
 
         local positionTable = getPositionTable()
         if positionTable then
             P.SavePosition(anchor, positionTable)
         end
-    end
-
-    if not combatDragWatcher then
-        combatDragWatcher = CreateFrame("Frame")
-        combatDragWatcher:RegisterEvent("PLAYER_REGEN_DISABLED")
-        combatDragWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
-        combatDragWatcher:SetScript("OnEvent", RunPendingCombatDragStops)
-    end
-    combatDragStops[StopMove] = true
-
-    dragger:SetScript("OnDragStart", function()
-        if isMoving then return end
-        if InCombatLockdown() then return end
-        isMoving = true
-        anchor:StartMoving()
-        anchor:SetUserPlaced(false)
     end)
-    dragger:SetScript("OnDragStop", StopMove)
 end
 
 -------------------------------------------------

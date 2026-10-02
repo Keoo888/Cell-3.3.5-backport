@@ -49,12 +49,9 @@ local config = Cell.CreateButton(anchorFrame, nil, "accent", {20, 10}, false, tr
 config:SetFrameStrata("MEDIUM")
 config:SetAllPoints(anchorFrame)
 config:RegisterForDrag("LeftButton")
---! WotLK fix: drag through the shared combat-safe wrapper - see
---! F.ApplyCombatSafeDrag. This anchor is a child of CellSpotlightFrame
---! (SecureFrameTemplate) and inherits its protection, so grabbing it as combat
---! started used to keep it on the cursor until the fight ended. The position
---! table is read at drop time, not captured.
-F.ApplyCombatSafeDrag(anchorFrame, config, function()
+--! WotLK fix: drag through the shared wrapper - see F.ApplyAnchorDrag. The
+--! position table is read at drop time, not captured.
+F.ApplyAnchorDrag(anchorFrame, config, function()
     return Cell.vars.currentLayoutTable and Cell.vars.currentLayoutTable["spotlight"]
         and Cell.vars.currentLayoutTable["spotlight"]["position"]
 end)

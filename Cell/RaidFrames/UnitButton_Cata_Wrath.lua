@@ -5706,6 +5706,9 @@ B.UpdateHealth = UnitButton_UpdateHealth
 B.UpdateHealthMax = UnitButton_UpdateHealthMax
 B.UpdateAuras = UnitButton_UpdateAuras
 B.UpdateName = UnitButton_UpdateName
+--! WotLK fix: exported for ForceSyncPartyButtons - asking the button via
+--! GetScript breaks once click-casting wraps this script.
+B.OnAttributeChanged = UnitButton_OnAttributeChanged
 
 -------------------------------------------------
 -- unit button init
