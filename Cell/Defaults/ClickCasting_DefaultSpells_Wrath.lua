@@ -37,6 +37,8 @@ local defaultSpells = {
             -- buff
             1126, -- 野性印记
             21849, -- 野性赐福
+            -- crowd control
+            "33786T", -- Cyclone
         },
     },
 

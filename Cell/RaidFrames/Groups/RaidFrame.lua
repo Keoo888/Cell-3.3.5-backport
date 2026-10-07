@@ -306,8 +306,10 @@ function F.GetRaidFramePoints(layout)
     return point, anchorPoint, groupAnchorPoint, P.Scale(unitSpacing), P.Scale(groupSpacing), P.Scale(unitSpacingX), P.Scale(unitSpacingY), verticalSpacing, horizontalSpacing, headerPoint, headerColumnAnchorPoint
 end
 
-local function UpdateHeadersShowRaidAttribute()
-    if Cell.vars.currentLayoutTable["main"]["combineGroups"] then
+--! WotLK fix: takes the layout table now - priming below runs while
+--! Cell.vars.currentLayoutTable still describes another group type.
+local function UpdateHeadersShowRaidAttribute(layout)
+    if layout["main"]["combineGroups"] then
         combinedHeader:SetAttribute("showRaid", true)
         combinedHeader:Show()
         for _, header in ipairs(separatedHeaders) do
@@ -585,22 +587,36 @@ do
     end
 end
 
+--! WotLK fix: a combat relog used to cost the whole fight - login lands "solo"
+--! (the roster is a frame late), the old code hid raidFrame and returned before
+--! any geometry, then lockdown blocked every header write until combat ended.
+--! Not being in a raid no longer hides raidFrame: FrameXML GetGroupHeaderType
+--! returns no type while GetNumRaidMembers() == 0, so configureChildren keeps
+--! the buttons hidden itself - same verdict, but from secure code that still
+--! runs in combat. Geometry is primed out of combat with the raid layout, so
+--! the header has sized, anchored buttons to fill in mid-fight. Proof: GAP-171.
+local primedRaidLayout
+
 local function RaidFrame_UpdateLayout(layout, which)
     -- visibility
-    if Cell.vars.groupType ~= "raid" or Cell.vars.isHidden then
+    local inRaid = Cell.vars.groupType == "raid"
+    if inRaid then
+        if Cell.vars.isHidden then layout = "hide" end
+    else
+        -- the layout a raid would use; raidType is known before the roster is
+        layout = Cell.vars.layoutAutoSwitch and Cell.vars.layoutAutoSwitch[Cell.vars.raidType or "raid_outdoor"]
+        which = nil -- prime everything, not the slice the caller asked for
+    end
+
+    if not layout or layout == "hide" then
         Cell.UnregisterAttributeDriver(raidFrame, "state-visibility")
         raidFrame:Hide()
+        primedRaidLayout = nil
         return
-    else
-        --! WotLK fix: a constant "show" state driver is polled every 0.2s on
-        --! 3.3.5 and is redundant because Core already defers layout updates
-        --! until combat ends. Show this Cell-owned secure frame directly.
-        Cell.UnregisterAttributeDriver(raidFrame, "state-visibility")
-        raidFrame:Show()
     end
 
     --! WotLK 3.3.5a: Safety check for layout
-    if not layout or not CellDB or not CellDB["layouts"] or not CellDB["layouts"][layout] then
+    if not CellDB or not CellDB["layouts"] or not CellDB["layouts"][layout] then
         -- Layout not ready yet, retry later
         C_Timer.After(0.5, function()
             --! WotLK fix: retry through Core_Wrath so a combat transition is
@@ -611,6 +627,13 @@ local function RaidFrame_UpdateLayout(layout, which)
         end)
         return
     end
+
+    Cell.UnregisterAttributeDriver(raidFrame, "state-visibility")
+    raidFrame:Show()
+
+    -- one pass per raid layout is enough while not in a raid: 45 button resizes
+    if not inRaid and primedRaidLayout == layout then return end
+    primedRaidLayout = layout
 
     -- update
     layout = CellDB["layouts"][layout]
@@ -657,7 +680,7 @@ local function RaidFrame_UpdateLayout(layout, which)
     end
 
     if not which or which == "header" then
-        UpdateHeadersShowRaidAttribute()
+        UpdateHeadersShowRaidAttribute(layout)
     end
 
     if layout["main"]["combineGroups"] then

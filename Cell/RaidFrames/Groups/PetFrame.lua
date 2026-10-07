@@ -306,10 +306,11 @@ local function PetFrame_UpdateLayout(layout, which)
     layout = CellDB["layouts"][layout]
 
     -- visibility
-    --! WotLK fix: "[@raid1,exists]" is 4.0+ macro syntax - 3.3.5's
-    --! SecureCmdOptionParse only knows "target=unit", so the old driver
-    --! always evaluated "hide" and the detached pet frame NEVER showed
-    --! anywhere (5-man pets came from the attached party-frame path).
+    --! WotLK note: "target=unit" is the long form the codex documents for 3.3.5a
+    --! SecureCmdOptionParse; the "@unit" shorthand parses here too (ElvUI 6.09,
+    --! Interface 30300, ships "[@raid6,exists]" as its default party visibility).
+    --! An earlier comment blamed "@" for the detached pet frame never showing -
+    --! that was wrong, the cause was the solo clause described below.
     if Cell.vars.isHidden then
         Cell.UnregisterAttributeDriver(petFrame, "state-visibility")
         petFrame:Hide()

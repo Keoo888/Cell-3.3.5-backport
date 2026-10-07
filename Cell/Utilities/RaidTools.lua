@@ -253,17 +253,15 @@ local function CreateRTPane()
     end, L["Glow when you are missing the buff"], L["The icon and the counter stay either way"])
     buffGlowCB:SetPoint("TOPLEFT", buffCB, "BOTTOMRIGHT", 5, -28)
 
-    --! WotLK feature: следить только за бафами своего класса (buffTracker[7]) - так же,
-    --! как это делает VuhDo. На присте в трекере остаются выносливость и дух, на маге -
-    --! интеллект, а благословения паладина уходят: кликом их всё равно не наложить.
-    --! Класс, который из этого списка не даёт ничего (шаман, разбойник, воин, охотник,
-    --! рыцарь смерти, чернокнижник), фильтр не трогает - иначе полоса стала бы пустой.
+    --! WotLK feature: track only my own class's buffs (buffTracker[7]), the VuhDo model.
+    --! A priest keeps Fortitude and Spirit, a mage Intellect; a class that casts none of
+    --! them (shaman, rogue, warrior, hunter, death knight, warlock) gets an empty bar.
     buffMineOnlyCB = Cell.CreateCheckButton(rtPane, L["Only track buffs of your class"], function(checked, self)
         CellDB["tools"]["buffTracker"][7] = checked
         Cell.Fire("UpdateTools", "buffTracker")
     end, L["Only track buffs of your class"],
     L["A priest tracks Fortitude and Spirit, a mage tracks Intellect"],
-    L["Classes that provide none of these keep the whole list"])
+    L["Classes that provide none of these show nothing - turn this off for the group overview"])
     buffMineOnlyCB:SetPoint("TOPLEFT", buffCB, "BOTTOMRIGHT", 5, -46)
 
     --! WotLK feature: "hide in combat" (buffTracker[8]), asked for by the tester, who

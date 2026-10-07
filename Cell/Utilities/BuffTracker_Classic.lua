@@ -851,15 +851,10 @@ local function IterateAllUnits()
     end
 
     --! WotLK feature: keep only the buffs my own class can actually cast (buffTracker[7],
-    --! on by default). This is the VuhDo model: VUHDO_CLASS_BUFFS is an explicit per-class
-    --! list of what that class provides, and its buff watch bar shows nothing else.
-    --! Tracking Blessing of Kings on a priest is pure noise - the icon cannot be clicked
-    --! to cast it, the missingBuffs indicator never lights up for it either (it only knows
-    --! buffsProvidedByMe), so the counter just competes for space with Fortitude/Spirit.
-    --! Classes that provide nothing from this list (shaman, rogue, warrior, hunter, death
-    --! knight, warlock) keep the whole group overview: filtering there would leave an empty
-    --! bar and take away the right-click report instead of cleaning anything up.
-    if CellDB["tools"]["buffTracker"][7] and next(buffsProvidedByMe) then
+    --! on by default) - the VuhDo model. A priest cannot click Blessing of Kings onto anyone,
+    --! and a class that casts none of them (shaman, rogue, warrior, hunter, death knight,
+    --! warlock) gets an empty bar until the option is turned off.
+    if CellDB["tools"]["buffTracker"][7] then
         --! clearing the field being visited is explicitly allowed by the Lua 5.1 manual
         --! ("you may clear existing fields"), unlike adding a new one.
         for buff in pairs(available) do
@@ -899,6 +894,16 @@ local function IterateAllUnits()
     end
 
     UpdateButtons()
+
+    --! WotLK perf: an empty bar has nothing to scan - a shaman with "only my class" on
+    --! would otherwise re-check a unit on every aura tick just to hit the early return in
+    --! CheckUnit. GroupRosterUpdate re-subscribes as soon as there is something to track.
+    if not hasBuffProvider then
+        buffTrackerFrame:UnregisterEvent("UNIT_AURA")
+        for unit in F.IterateGroupMembers() do
+            I.HideMissingBuffs(unit, true)
+        end
+    end
 end
 
 ---------------------------------------------------------------------

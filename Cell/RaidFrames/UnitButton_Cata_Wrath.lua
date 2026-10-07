@@ -2538,10 +2538,16 @@ local function UnitButton_RoleChanged(b)
 end
 
 UnitButton_UpdateLeader = function(self, event)
-    local unit = self.states.unit
-    if not unit then return end
-
     local leaderIcon = self.indicators.leaderIcon
+    local unit = self.states.unit
+    --! WotLK fix: returning without hiding left the crown lit on a button whose
+    --! unit went away (member left, pet died, spotlight cleared).
+    if not unit then
+        leaderIcon:Hide()
+        self.states.isLeader = false
+        self.states.isAssistant = false
+        return
+    end
 
     if enabledIndicators["leaderIcon"] then
         if indicatorBooleans["leaderIcon"] and (InCombatLockdown() or event == "PLAYER_REGEN_DISABLED") then
@@ -2551,7 +2557,8 @@ UnitButton_UpdateLeader = function(self, event)
 
         local isLeader = Cell.UnitIsGroupLeader(unit)
         self.states.isLeader = isLeader
-        local isAssistant = Cell.UnitIsGroupAssistant(unit) and IsInRaid()
+        --! UnitIsGroupAssistant now carries its own UnitInRaid guard.
+        local isAssistant = Cell.UnitIsGroupAssistant(unit)
         self.states.isAssistant = isAssistant
 
         leaderIcon:SetIcon(isLeader, isAssistant)
@@ -2564,11 +2571,13 @@ end
 --! not in a local - the main chunk is at the Lua 5.1 ceiling of 200 locals. Needs no
 --! event: RAID_ROSTER_UPDATE covers assignment changes and already forces a full update.
 function B.UpdateAssignment(self)
-    local unit = self.states.unit
-    if not unit then return end
-
     local partyAssignmentIcon = self.indicators.partyAssignmentIcon
-
+    local unit = self.states.unit
+    --! WotLK fix: same stale-icon class as the crown above.
+    if not unit then
+        partyAssignmentIcon:Hide()
+        return
+    end
     if enabledIndicators["partyAssignmentIcon"] then
         partyAssignmentIcon:UpdateAssignment(unit)
     else
@@ -2981,7 +2990,13 @@ end
 --! false = resolved, no mob; nil = resolve here. See P-65 / GAP-132.
 local function UnitButton_UpdateThreat(self, mobArg)
     local unit = self.states.displayedUnit
-    if not unit or not UnitExists(unit) then return end
+    --! WotLK fix: returning without hiding left the aggro glow and border lit on a
+    --! button whose unit went away - the frame kept blinking with nobody on it.
+    if not unit or not UnitExists(unit) then
+        self.indicators.aggroBlink:Hide()
+        self.indicators.aggroBorder:Hide()
+        return
+    end
 
     local blink = enabledIndicators["aggroBlink"]
     local border = enabledIndicators["aggroBorder"]
@@ -2999,6 +3014,11 @@ local function UnitButton_UpdateThreat(self, mobArg)
         mob = nil
     end
     local status, percent, isTanking
+    --! WotLK fix: the global category is read for every unit, mob selected or not - 2 and 3
+    --! mean "this unit IS some NPC's primary target" (codex), which is aggro no matter what
+    --! the player has targeted. Status 1 is NOT taken from here: it would relight the whole
+    --! raid. Costs one C call per button; the branch below reuses it instead of its own.
+    local anyStatus = UnitThreatSituation(unit)
 
     if mob then
         -- isTanking, status, scaledPercentage, rawPercentage = UnitDetailedThreatSituation(unit, mobUnit)
@@ -3010,55 +3030,54 @@ local function UnitButton_UpdateThreat(self, mobArg)
         --! nil здесь означает "у этого юнита на этом мобе угрозы нет" - и это НЕ повод
         --! падать в глобальную ветку: именно она и подсвечивала весь рейд.
     else
-        status = UnitThreatSituation(unit)
+        status = anyStatus
         --! В этой ветке процентов не существует, есть только категория. status >= 1 -
         --! это ровно "набрал 100% угрозы того, кто моба держит", поэтому нормализуем
-        --! к 100 и дальше сравниваем одинаково. Порог в глобальной ветке не работает -
-        --! показываем как раньше, чтобы без цели индикатор не потерять совсем.
+        --! к 100 и дальше сравниваем одинаково.
         percent = (status and status >= 1) and 100 or 0
-        --! WotLK fix: status 2 and 3 both mean "this unit IS the mob's primary target"
-        --! (codex, UnitThreatSituation), so the top-of-slider rule below still works
-        --! without a hostile target selected.
-        isTanking = status and status >= 2
     end
 
     --! Порог и "не показывать танков" - свои у каждого из двух индикаторов;
     --! данные угрозы при этом добываются один раз на кнопку.
     local isTank = self.states.role == "TANK"
 
-    --! WotLK fix: the top of the slider (130, see CreateSetting_ThreatThreshold in
-    --! Widgets_IndicatorSettings.lua) means "the mob is already hitting this unit",
-    --! not "130% of somebody else's threat". Such a percentage practically never
-    --! exists: rawPercentage is measured against the threat of whoever holds the mob,
-    --! and the moment the unit rips it the unit becomes that holder itself, so the
-    --! ratio reads 100 again. The old comparison therefore made the highest setting
-    --! fire never at all instead of firing exactly on a real pull.
+    --! WotLK fix: "being hit" lights the unit at EVERY threshold, not only at the top of
+    --! the slider (130, see CreateSetting_ThreatThreshold). rawPercentage is measured
+    --! against whoever holds the mob, and ripping it makes the unit that holder, so the
+    --! ratio reads 100 again - any threshold above 100 left both the tank and the puller
+    --! dark. Below 130 the percentage only adds the early warning on top.
+    local beingHit = (isTanking or (anyStatus and anyStatus >= 2)) and true or false
     local blinkThreshold = indicatorNums["aggroBlink"] or 100
     local borderThreshold = indicatorNums["aggroBorder"] or 100
     local blinkOn, borderOn
 
     if blinkThreshold >= 130 then
-        blinkOn = isTanking and true or false
+        blinkOn = beingHit
     else
-        blinkOn = percent > 0 and percent >= blinkThreshold
+        blinkOn = beingHit or (percent > 0 and percent >= blinkThreshold)
     end
 
     if borderThreshold >= 130 then
-        borderOn = isTanking and true or false
+        borderOn = beingHit
     else
-        borderOn = percent > 0 and percent >= borderThreshold
+        borderOn = beingHit or (percent > 0 and percent >= borderThreshold)
     end
+
+    --! WotLK fix: colour by the worse of the two categories - the unit an add jumped on
+    --! is red even though against the tank's target it is 0 or 1.
+    local colorStatus = status or 0
+    if anyStatus and anyStatus > colorStatus then colorStatus = anyStatus end
 
     if blink and blinkOn
         and not (isTank and indicatorBooleans["aggroBlink"]) then
-        self.indicators.aggroBlink:ShowAggro(GetThreatStatusColor(status or 0))
+        self.indicators.aggroBlink:ShowAggro(GetThreatStatusColor(colorStatus))
     else
         self.indicators.aggroBlink:Hide()
     end
 
     if border and borderOn
         and not (isTank and indicatorBooleans["aggroBorder"]) then
-        self.indicators.aggroBorder:ShowAggro(GetThreatStatusColor(status or 0))
+        self.indicators.aggroBorder:ShowAggro(GetThreatStatusColor(colorStatus))
     else
         self.indicators.aggroBorder:Hide()
     end
@@ -3072,7 +3091,11 @@ local function UnitButton_UpdateThreatBar(self, mobArg)
     end
 
     local unit = self.states.displayedUnit
-    if not unit or not UnitExists(unit) then return end
+    --! WotLK fix: same stale-indicator class as UnitButton_UpdateThreat above.
+    if not unit or not UnitExists(unit) then
+        self.indicators.aggroBar:Hide()
+        return
+    end
 
     --! WotLK fix: моба берём тем же правилом, что и мигание с рамкой (см.
     --! B.GetThreatMobUnit). Жёсткий "target" означал, что у хилера - который

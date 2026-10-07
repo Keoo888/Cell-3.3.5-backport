@@ -2939,7 +2939,7 @@ function F.Revise()
     --! элементами против семиэлементного дефолта потеряет и размер иконок, и список
     --! баффов. Значение true - это то, о чём просил владелец (на маге только интеллект,
     --! на присте только выносливость и дух); класс, который не даёт из списка ничего,
-    --! фильтр не трогает вовсе, см. IterateAllUnits в BuffTracker_Classic.lua.
+    --! не видит полосу вовсе, см. IterateAllUnits в BuffTracker_Classic.lua.
     if type(CellDB["tools"]) == "table" and type(CellDB["tools"]["buffTracker"]) == "table"
         and type(CellDB["tools"]["buffTracker"][7]) ~= "boolean" then
         CellDB["tools"]["buffTracker"][7] = true

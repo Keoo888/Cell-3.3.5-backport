@@ -1025,20 +1025,15 @@ local function ThreatSnapshot()
             else
                 percent = (any and any >= 1) and 100 or 0
             end
-            --! WotLK fix: mirror the top-of-slider rule from UnitButton_UpdateThreat.
-            --! At 130 the verdict is "the mob is already hitting this unit" (isTanking,
-            --! or status >= 2 without a hostile target), not a percentage comparison.
+            --! WotLK fix: same rule as UnitButton_UpdateThreat - "being hit" (isTanking, or
+            --! global status >= 2) lights at every threshold, percentage only adds below 130.
+            local hit = (isTanking or (any and any >= 2)) and true or false
             local show
             if threshold >= 130 then
-                local hit
-                if mob then
-                    hit = isTanking and true or false
-                else
-                    hit = (any and any >= 2) and true or false
-                end
                 show = hit and not (hideTanks and role == "TANK")
             else
-                show = percent > 0 and percent >= threshold and not (hideTanks and role == "TANK")
+                show = (hit or (percent > 0 and percent >= threshold))
+                    and not (hideTanks and role == "TANK")
             end
 
             if show then
@@ -1612,6 +1607,168 @@ local function CmdIndicators()
 end
 
 -------------------------------------------------
+-- leader / aggro: что РЕАЛЬНО нарисовано на кнопках
+-------------------------------------------------
+--! Тестер: "в группе показывается 3 лидера" + "с аггро какие-то проблемы". Обе
+--! иконки живут на КНОПКЕ, а вопрос задаётся про ЮНИТ этой кнопки, поэтому снимок
+--! обязан быть покнопочным: обход raid1..N (как у /cell debug threat) не видит ни
+--! питомцев, ни spotlight, ни залипшую иконку на кнопке без юнита. Печатаем сырые
+--! ответы клиента рядом с вердиктом Cell и с ЖИВЫМ состоянием иконки.
+local function CollectButtons(out)
+    local ub = Cell.unitButtons
+    if not ub then return end
+    for container, t in pairs(ub) do
+        if type(t) == "table" then
+            for key, v in pairs(t) do
+                if key ~= "units" and type(v) == "table" then
+                    if v.GetObjectType then
+                        out[#out + 1] = {container, tostring(key), v}
+                    else
+                        -- raid: заголовок -> массив кнопок
+                        for i = 1, #v do
+                            local b = v[i]
+                            if type(b) == "table" and b.GetObjectType then
+                                out[#out + 1] = {container .. "/" .. tostring(key), tostring(i), b}
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+local function Lit(w)
+    return (w and w.IsShown and w:IsShown()) and true or false
+end
+
+local function CmdLeader(rest)
+    local showAll = (rest or ""):lower():find("all", 1, true) and true or false
+
+    Say(format("%sleader snapshot%s: groupType=%s, рейд=%d, группа=%d, IsInGroup=%s",
+        C_HEAD, C_OFF,
+        tostring(Cell.vars and Cell.vars.groupType),
+        GetNumRaidMembers(), GetNumPartyMembers(),
+        tostring(Cell.IsInGroup and Cell.IsInGroup())))
+    Say(format("  про себя клиент говорит: IsPartyLeader=%s, IsRaidLeader=%s, IsRaidOfficer=%s",
+        tostring(IsPartyLeader()), tostring(IsRaidLeader()), tostring(IsRaidOfficer())))
+
+    local buttons = {}
+    CollectButtons(buttons)
+    print("кнопка | unit | имя | PartyLeader/RaidOfficer | InParty/InRaid | Cell L/A | иконка")
+
+    local crowns, stars, hiddenCrowns, stale = 0, 0, 0, 0
+    for i = 1, #buttons do
+        local container, key, b = buttons[i][1], buttons[i][2], buttons[i][3]
+        local unit = b.states and b.states.unit
+        local icon = b.indicators and b.indicators.leaderIcon
+        local visible = b.IsVisible and b:IsVisible()
+        local lit = Lit(icon)
+        local path = (lit and icon.GetTexture) and icon:GetTexture() or nil
+        local isStar = type(path) == "string" and path:find("Assistant", 1, true) and true or false
+
+        if lit then
+            if not visible then
+                hiddenCrowns = hiddenCrowns + 1
+            elseif isStar then
+                stars = stars + 1
+            else
+                crowns = crowns + 1
+            end
+            if not unit or not UnitExists(unit) then stale = stale + 1 end
+        end
+
+        local raw = unit and (UnitIsPartyLeader(unit) or UnitIsRaidOfficer(unit))
+        if showAll or lit or raw then
+            print(format("  %s.%s%s | %s | %s | %s/%s | %s/%s | %s/%s | %s",
+                container, key, visible and "" or " (скрыта)",
+                unit and tostring(unit) or (C_WARN .. "нет юнита" .. C_OFF),
+                unit and (UnitName(unit) or "?") or "-",
+                unit and tostring(UnitIsPartyLeader(unit)) or "-",
+                unit and tostring(UnitIsRaidOfficer(unit)) or "-",
+                unit and tostring(UnitInParty(unit)) or "-",
+                unit and tostring(UnitInRaid(unit)) or "-",
+                tostring(b.states and b.states.isLeader),
+                tostring(b.states and b.states.isAssistant),
+                lit and (isStar and "|cffa0a0ffЗВЕЗДА|r" or "|cffffd100КОРОНА|r") or "-"))
+        end
+    end
+
+    Say(format("кнопок всего %d; на ВИДИМЫХ: корон %d, звёзд %d (ещё %d на скрытых)",
+        #buttons, crowns, stars, hiddenCrowns))
+    if crowns > 1 then
+        Say(format("%sкорон больше одной%s - смотри колонки InParty/InRaid у лишних строк: "
+            .. "питомец в группе не состоит (UnitInParty про него отвечает nil), "
+            .. "и корона на его кнопке - это ровно та ошибка", C_WARN, C_OFF))
+    end
+    if stale > 0 then
+        Say(format("%sзалипших иконок: %d%s - иконка горит на кнопке, чьего юнита уже нет",
+            C_WARN, stale, C_OFF))
+    end
+end
+
+local function CmdAggro(rest)
+    local showAll = (rest or ""):lower():find("all", 1, true) and true or false
+    local mob = Cell.bFuncs and Cell.bFuncs.GetThreatMobUnit and Cell.bFuncs.GetThreatMobUnit()
+
+    Say(format("%saggro snapshot%s: моб=%s", C_HEAD, C_OFF,
+        mob and format("%s (%s)", mob, UnitName(mob) or "?") or (C_WARN .. "нет" .. C_OFF)))
+    if mob then
+        Say("  правило: парный запрос UnitDetailedThreatSituation(unit, моб) - проценты настоящие")
+    else
+        Say(format("  %sправило: откат на UnitThreatSituation(unit) по ЛЮБОМУ мобу%s - "
+            .. "загорается при status >= 1, то есть \"набрал 100%% угрозы танка, но моб бьёт не его\". "
+            .. "У хилера цель дружественная, парного запроса нет, и так мигать может почти вся группа",
+            C_WARN, C_OFF))
+    end
+
+    local buttons = {}
+    CollectButtons(buttons)
+    print("кнопка | unit | имя | any | isTanking/status/raw | blink/border/bar")
+
+    local blinking, visibleButtons, stale = 0, 0, 0
+    for i = 1, #buttons do
+        local container, key, b = buttons[i][1], buttons[i][2], buttons[i][3]
+        local unit = b.states and b.states.displayedUnit
+        local ind = b.indicators
+        local blink, border, bar = Lit(ind and ind.aggroBlink), Lit(ind and ind.aggroBorder), Lit(ind and ind.aggroBar)
+        local visible = b.IsVisible and b:IsVisible()
+        local alive = unit and UnitExists(unit)
+
+        if visible then visibleButtons = visibleButtons + 1 end
+        if blink and visible then blinking = blinking + 1 end
+        if (blink or border or bar) and not alive then stale = stale + 1 end
+
+        local any = alive and UnitThreatSituation(unit) or nil
+        local isTanking, status, scaled, raw
+        if alive and mob then
+            isTanking, status, scaled, raw = UnitDetailedThreatSituation(unit, mob)
+        end
+
+        if showAll or blink or border or bar or any then
+            print(format("  %s.%s%s | %s | %s | %s | %s/%s/%s | %s/%s/%s",
+                container, key, visible and "" or " (скрыта)",
+                unit and tostring(unit) or (C_WARN .. "нет юнита" .. C_OFF),
+                alive and (UnitName(unit) or "?") or (C_WARN .. "юнита нет" .. C_OFF),
+                tostring(any),
+                tostring(isTanking), tostring(status),
+                raw and format("%.0f%%", raw) or "nil",
+                blink and "|cffff2727МИГ|r" or "-",
+                border and "|cffff2727РАМКА|r" or "-",
+                bar and "ПОЛОСА" or "-"))
+        end
+    end
+
+    Say(format("мигает %d из %d видимых кнопок", blinking, visibleButtons))
+    if stale > 0 then
+        Say(format("%sзалипших подсветок: %d%s - горит на кнопке, чьего юнита уже нет",
+            C_WARN, stale, C_OFF))
+    end
+    Say(format("рядом: %s/cell debug threat%s считает ту же угрозу по ростеру, без кнопок",
+        C_KEY, C_OFF))
+end
+
+-------------------------------------------------
 -- Debug.lua вызывает наши билдеры ПОСЛЕ блока callbacks, чтобы
 -- /cell debug dump одной копипастой выдавал полный снимок сессии.
 if D.DumpSections then
@@ -1641,6 +1798,8 @@ local EXTRA = {
     count = CmdCount,
     movers = CmdMovers,
     threat = CmdThreat,
+    leader = CmdLeader,
+    aggro = CmdAggro,
     readycheck = CmdReadyCheck,
     raiddebuffs = CmdRaidDebuffs,
     indicators = CmdIndicators,
@@ -1684,6 +1843,8 @@ function D:HandleCommand(option, raw)
         print("  /cell debug roles - источник роли каждого участника группы/рейда")
         print("  /cell debug movers - состояние мувер-фреймов: мышь, размер, protected, сохранённая позиция")
         print("  /cell debug threat [on|off] - снимок угрозы по группе; on/off считает частоту threat-событий")
+        print("  /cell debug leader [all] - кто из КНОПОК показывает корону/звезду и почему (сырые ответы клиента рядом)")
+        print("  /cell debug aggro [all] - кто из КНОПОК реально подсвечен угрозой и по какому правилу")
         print("  /cell debug readycheck [off] - сырые аргументы READY_CHECK_* и перебор ростера рядом (GAP-005)")
         print("  /cell debug raiddebuffs [full] - какие встроенные raid-debuff id мёртвы на 3.3.5 + сверка с ElvUI")
         print("  /cell debug indicators - чей набор индикаторов у каждого профиля: свой или общий, и вкл/выкл своих групп")

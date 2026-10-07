@@ -163,46 +163,25 @@ local function CreateDRPane()
     drDebuffsList.mask:Hide()
 
     local popup = Cell.CreatePopupEditBox(drDebuffsList)
-    popup:SetNumeric(true)
-    popup:SetScript("OnTextChanged", function()
-        local spellId = tonumber(popup:GetText())
-        if not spellId then
-            CellSpellTooltip:Hide()
-            return
-        end
-
-        local name, tex = F.GetSpellInfo(spellId)
-        if not name then
-            CellSpellTooltip:Hide()
-            return
-        end
-
-        CellSpellTooltip:SetOwner(popup, "ANCHOR_NONE")
-        CellSpellTooltip:SetPoint("TOPLEFT", popup, "BOTTOMLEFT", 0, -1)
-        --! WotLK fix: SetSpellByID on 3.3.5 is (id, isPet, showSubtext) - a texture path
-        --! in slot 2 is truthy and sends the client to the PET spellbook. The icon used to
-        --! be picked up by a global hooksecurefunc, which was removed; set it explicitly.
-        CellSpellTooltip:SetSpellIcon(tex)
-        CellSpellTooltip:SetSpellByID(spellId)
-        CellSpellTooltip:Show()
-    end)
-
-    popup:HookScript("OnHide", function()
-        CellSpellTooltip:Hide()
-    end)
+    --! WotLK feature: the box takes an id, a pasted spell link or a spell NAME.
+    --! Cell.SetupSpellInput owns the preview and keeps the resolved id on the box,
+    --! because the text itself may now hold a name.
+    Cell.SetupSpellInput(popup)
 
     debuffItems[0] = Cell.CreateButton(drDebuffsList.scrollFrame.content, "", "transparent-accent", {20, 20})
     debuffItems[0]:SetTexture("Interface\\AddOns\\Cell\\Media\\Icons\\new", {16, 16}, {"RIGHT", -1, 0})
     debuffItems[0]:SetScript("OnClick", function(self)
         local popup = Cell.CreatePopupEditBox(drDebuffsList, function(text)
-            local spellId = tonumber(text)
+            --! WotLK feature: a name carries no id in the text, so take the id the
+            --! input resolved.
+            local spellId = tonumber(text) or drDebuffsList.popupEditBox.spellId
             local spellName = F.GetSpellInfo(spellId)
             if spellId and spellName then
                 -- update db
                 tinsert(CellDB["dispelRequest"]["debuffs"], spellId)
                 LoadList(true)
             else
-                F.Print(L["Invalid spell id."])
+                F.Print(L["Invalid spell id or name."])
             end
         end)
         --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
@@ -221,7 +200,7 @@ local function CreateDRPane()
         --! now that SetOwner puts it inside the list (that is what UIDropDownMenu.lua
         --! and ChatFrame.lua use an explicit strata FOR on this client - escaping the
         --! parent's group). Removing it costs nothing and keeps the box with its row.
-        popup:SetTips("|cffababab"..L["Input spell id"])
+        popup:SetTips("|cffababab"..L["Input spell id or name"])
     end)
 
     drDebuffsText = drPane:CreateFontString(nil, "OVERLAY", "CELL_FONT_WIDGET")

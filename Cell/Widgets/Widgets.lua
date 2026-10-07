@@ -2350,6 +2350,110 @@ function Cell.CreatePopupEditBox(parent, func, multiLine)
 end
 
 -----------------------------------------
+-- spell input: id, pasted link or name
+-----------------------------------------
+--! WotLK feature: these boxes took a numeric id only, so adding a spell meant
+--! looking its id up outside the game. GetSpellInfo("name") here reads the
+--! player's spellbook, not the spell database, so a typed name goes through
+--! F.SearchSpellsByName (chunked and debounced) and its first match is previewed.
+--! eb.spellId holds the id that will be stored - callers must read it instead of
+--! re-parsing the text, which may now hold a name.
+--! One name is a family of ids (per rank, raid size and difficulty) and the first
+--! match is the base spell. The Raid Debuffs tab offers the whole family in a
+--! dropdown because it has room for one; these boxes are 20px rows inside a
+--! clipped scroll frame, so they take the base id and leave the rest to
+--! "Track by name".
+function Cell.SetupSpellInput(eb)
+    eb:SetNumeric(false)
+    eb.spellId = nil
+
+    --! the tips line under the box is the only room for a status (the spell tooltip
+    --! shares its anchor), so remember the hint the caller set and put it back
+    if not eb.spellInputHooked and eb.SetTips then
+        eb.spellInputHooked = true
+        local SetTips = eb.SetTips
+        function eb:SetTips(text)
+            if not eb.showingStatus then eb.hintTips = text end
+            SetTips(eb, text)
+        end
+    end
+
+    local function Status(text)
+        if not eb.SetTips or not text then return end
+        eb.showingStatus = true
+        eb:SetTips(text)
+        eb.showingStatus = nil
+    end
+
+    local function Preview(spellId)
+        local name, icon = F.GetSpellInfo(spellId)
+        if not name then
+            eb.spellId = nil
+            CellSpellTooltip:Hide()
+            return
+        end
+
+        eb.spellId = spellId
+        Status(eb.hintTips)
+        CellSpellTooltip:SetOwner(eb, "ANCHOR_NONE")
+        CellSpellTooltip:SetPoint("TOPLEFT", eb, "BOTTOMLEFT", 0, -1)
+        --! WotLK fix: on 3.3.5 slot 2 of SetSpellByID is isPet, not a texture.
+        --! A non-empty path there is truthy and sends the lookup to the pet book.
+        CellSpellTooltip:SetSpellIcon(icon)
+        CellSpellTooltip:SetSpellByID(spellId)
+        CellSpellTooltip:Show()
+    end
+
+    local function StopSearch()
+        if eb.searchTimer then
+            eb.searchTimer:Cancel()
+            eb.searchTimer = nil
+        end
+        F.AbortSpellSearch()
+    end
+
+    eb:SetScript("OnTextChanged", function()
+        StopSearch()
+
+        local text = strtrim(eb:GetText() or "")
+        --! a pasted or shift-clicked link ("|cff71d5ff|Hspell:774|h[...]|h|r")
+        --! carries the id, so take it instead of making the user cut it out
+        local spellId = tonumber(strmatch(text, "|Hspell:(%d+)") or text)
+        if spellId then
+            Preview(spellId)
+            return
+        end
+
+        eb.spellId = nil
+        CellSpellTooltip:Hide()
+        if text == "" then
+            Status(eb.hintTips)
+            return
+        end
+
+        Status("|cffababab"..L["Searching..."])
+        --! WotLK perf: one pass over the spell database per pause in typing,
+        --! not one per keystroke.
+        eb.searchTimer = C_Timer.NewTimer(0.4, function()
+            eb.searchTimer = nil
+            F.SearchSpellsByName(text, 50, function(matches)
+                if #matches == 0 then
+                    Status("|cffababab"..L["No spell found."])
+                else
+                    Preview(matches[1][1])
+                end
+            end)
+        end)
+    end)
+
+    eb:HookScript("OnHide", function()
+        StopSearch()
+        eb.spellId = nil
+        CellSpellTooltip:Hide()
+    end)
+end
+
+-----------------------------------------
 -- dual popup edit box
 -----------------------------------------
 function Cell.CreateDualPopupEditBox(parent, leftTip, rightTip, isNumeric, func)

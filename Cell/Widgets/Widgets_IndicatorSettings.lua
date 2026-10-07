@@ -4313,33 +4313,10 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
     -- tooltip
     if not parent.popupEditBox then
         local popup = Cell.CreatePopupEditBox(parent)
-        popup:SetNumeric(true)
-
-        popup:SetScript("OnTextChanged", function()
-            local spellId = tonumber(popup:GetText())
-            if not spellId then
-                CellSpellTooltip:Hide()
-                return
-            end
-
-            local name, tex = F.GetSpellInfo(spellId)
-            if not name then
-                CellSpellTooltip:Hide()
-                return
-            end
-
-            CellSpellTooltip:SetOwner(popup, "ANCHOR_NONE")
-            CellSpellTooltip:SetPoint("TOPLEFT", popup, "BOTTOMLEFT", 0, -1)
-            --! WotLK fix: on 3.3.5 slot 2 of SetSpellByID is isPet, not a texture.
-            --! A non-empty path there is truthy and sends the lookup to the pet book.
-            CellSpellTooltip:SetSpellIcon(tex)
-            CellSpellTooltip:SetSpellByID(spellId)
-            CellSpellTooltip:Show()
-        end)
-
-        popup:HookScript("OnHide", function()
-            CellSpellTooltip:Hide()
-        end)
+        --! WotLK feature: the box takes an id, a pasted spell link or a spell NAME.
+        --! Cell.SetupSpellInput owns the preview and keeps the resolved id on the
+        --! box, because the text itself may now hold a name.
+        Cell.SetupSpellInput(popup)
     end
 
     -- new
@@ -4352,7 +4329,9 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
 
     auraButtons[0]:SetScript("OnClick", function(self)
         local popup = Cell.CreatePopupEditBox(parent, function(text)
-            local spellId = tonumber(text)
+            --! WotLK feature: a name carries no id in the text, so take the id the
+            --! input resolved; tonumber(text) still carries the "0 = all" case.
+            local spellId = tonumber(text) or parent.popupEditBox.spellId
             local spellName = F.GetSpellInfo(spellId)
             if (spellId and spellName) or (spellId == 0 and isZeroValid) then
                 -- update db
@@ -4365,7 +4344,7 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                 CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons, isZeroValid, hasColorPicker, updateHeightFunc)
                 updateHeightFunc(#auraTable, 19)
             else
-                F.Print(L["Invalid spell id."])
+                F.Print(L["Invalid spell id or name."])
             end
         end)
         --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
@@ -4378,9 +4357,9 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
         if isZeroValid then
-            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id"]..", 0 = "..L["all"])
+            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id or name"]..", 0 = "..L["all"])
         else
-            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id"])
+            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id or name"])
         end
     end)
 
@@ -4588,7 +4567,9 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
         -- functions
         auraButtons[i]:SetScript("OnClick", function()
             local popup = Cell.CreatePopupEditBox(parent, function(text)
-                local spellId = tonumber(text)
+                --! WotLK feature: a name carries no id in the text, so take the id
+                --! the input resolved; tonumber(text) still carries "0 = all".
+                local spellId = tonumber(text) or parent.popupEditBox.spellId
                 if spellId == 0 then
                     if isZeroValid then
                         auraButtons[i].spellIdText:SetText("0")
@@ -4597,7 +4578,7 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                         auraButtons[i].spellIconBg:Hide()
                         auraButtons[i].spellIcon:Hide()
                     else
-                        F.Print(L["Invalid spell id."])
+                        F.Print(L["Invalid spell id or name."])
                     end
                 else
                     local spellName, spellIcon = F.GetSpellInfo(spellId)
@@ -4623,7 +4604,7 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
                             auraButtons[i].spellIcon:Hide()
                         end
                     else
-                        F.Print(L["Invalid spell id."])
+                        F.Print(L["Invalid spell id or name."])
                     end
                 end
 
@@ -4635,7 +4616,7 @@ local function CreateAuraButtons(parent, auraButtons, auraTable, noUpDownButtons
             popup:SetPoint("TOPLEFT", auraButtons[i])
             popup:SetPoint("BOTTOMRIGHT", auraButtons[i])
             popup:ShowEditBox(auraButtons[i].spellId or "")
-            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id"])
+            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id or name"])
         end)
 
         auraButtons[i].del:SetScript("OnClick", function()
@@ -5579,30 +5560,9 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
     -- tooltip
     if not parent.popupEditBox then
         local popup = Cell.CreatePopupEditBox(parent)
-        popup:SetNumeric(true)
-
-        popup:SetScript("OnTextChanged", function()
-            local spellId = tonumber(popup:GetText())
-            if not spellId then
-                CellSpellTooltip:Hide()
-                return
-            end
-
-            local name = F.GetSpellInfo(spellId)
-            if not name then
-                CellSpellTooltip:Hide()
-                return
-            end
-
-            CellSpellTooltip:SetOwner(popup, "ANCHOR_NONE")
-            CellSpellTooltip:SetPoint("TOPLEFT", popup, "BOTTOMLEFT", 0, -1)
-            CellSpellTooltip:SetSpellByID(spellId)
-            CellSpellTooltip:Show()
-        end)
-
-        popup:HookScript("OnHide", function()
-            CellSpellTooltip:Hide()
-        end)
+        --! WotLK feature: id, pasted spell link or spell NAME, same as the aura
+        --! list above - Cell.SetupSpellInput owns the preview and the resolved id.
+        Cell.SetupSpellInput(popup)
     end
 
     -- new
@@ -5615,7 +5575,9 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
 
     actionButtons[0]:SetScript("OnClick", function(self)
         local popup = Cell.CreatePopupEditBox(parent, function(text)
-            local spellId = tonumber(text)
+            --! WotLK feature: a name carries no id in the text, so take the id the
+            --! input resolved.
+            local spellId = tonumber(text) or parent.popupEditBox.spellId
             local spellName = F.GetSpellInfo(spellId)
             if spellId and spellName then
                 -- update db
@@ -5627,7 +5589,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                 CreateActionButtons(parent, spellTable, updateHeightFunc)
                 updateHeightFunc(19)
             else
-                F.Print(L["Invalid spell id."])
+                F.Print(L["Invalid spell id or name."])
             end
         end)
         --! WotLK fix: own the box from the row it edits - see eb:SetOwner in
@@ -5638,7 +5600,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
         popup:SetPoint("TOPLEFT", self)
         popup:SetPoint("BOTTOMRIGHT", self)
         popup:ShowEditBox("")
-        parent.popupEditBox:SetTips("|cffababab"..L["Input spell id"])
+        parent.popupEditBox:SetTips("|cffababab"..L["Input spell id or name"])
     end)
 
 
@@ -5804,7 +5766,9 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
         -- functions
         actionButtons[i].edit:SetScript("OnClick", function()
             local popup = Cell.CreatePopupEditBox(parent, function(text)
-                local spellId = tonumber(text)
+                --! WotLK feature: a name carries no id in the text, so take the id
+                --! the input resolved.
+                local spellId = tonumber(text) or parent.popupEditBox.spellId
                 local spellName, spellIcon = F.GetSpellInfo(spellId)
                 if spellId and spellName then
                     -- update text
@@ -5823,7 +5787,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
                         actionButtons[i].spellIcon:Hide()
                     end
                 else
-                    F.Print(L["Invalid spell id."])
+                    F.Print(L["Invalid spell id or name."])
                 end
             end)
             --! WotLK fix: own the box from the row (eb:SetOwner), as above. These rows
@@ -5832,7 +5796,7 @@ local function CreateActionButtons(parent, spellTable, updateHeightFunc)
             popup:SetPoint("TOPLEFT", actionButtons[i])
             popup:SetPoint("BOTTOMRIGHT", actionButtons[i])
             popup:ShowEditBox(actionButtons[i].spellId or "")
-            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id"])
+            parent.popupEditBox:SetTips("|cffababab"..L["Input spell id or name"])
         end)
 
         actionButtons[i].del:SetScript("OnClick", function()

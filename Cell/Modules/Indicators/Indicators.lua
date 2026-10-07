@@ -1646,9 +1646,13 @@ local DEBUFFS_TOOLTIP2 = L["This will make these icons not click-through-able"]
 --! indicators (see SESSION_NOTES #20). Lines are split on "|" by SetDBValue.
 --! No ":" inside these strings - the setting itself is parsed with
 --! string.split(":", ...), so a colon here would cut the tooltip short.
+--! WotLK fix: the third line used to promise "the same switch" in the Appearance
+--! tab, so it sent players looking for a checkbox that does not exist - the
+--! global control is a dropdown inside the Aura Icon Options popup. Named the
+--! real path instead.
 SHOW_JUMP_TOOLTIP = L["The icon hops when the aura is refreshed - its stack grows or its duration starts over"]
     .."|"..L["Nothing else changes, the countdown and the stack count keep working"]
-    .."|"..L["Appearance tab holds the same switch for every aura icon at once"]
+    .."|"..L["To turn it off for every aura icon at once, open the Appearance tab, press Aura Icon Options and set Play Icon Animation When to Never"]
 
 --! custom: same rules as above - no ":" and no "|" inside these strings.
 local TYPE_BORDER_TOOLTIP = L["A colored ring around the icon - its color is the dispel type (Magic, Curse, Disease, Poison) and black when the aura has no type"]

@@ -804,7 +804,7 @@ local function CreateDebuffsFrame()
             local id = self.createSpellId or 0
             local name = F.GetSpellInfo(id)
             if not name then
-                F.Print(L["Invalid spell id."])
+                F.Print(L["Invalid spell id or name."])
                 return
             end
             -- check whether already exists

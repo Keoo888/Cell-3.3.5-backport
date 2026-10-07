@@ -303,23 +303,36 @@ do
     --! five fresh strings just to read the rank. UnitButton_UpdateLeader calls these
     --! once per button on every roster change - a 25-man threw away 100+ strings per
     --! event on Lua 5.1 without a JIT.
-    --! Shape from the two implementations known to work here: Blizzard's
-    --! TargetFrame.lua pairs UnitIsPartyLeader with UnitInRaid (proof that "party"
-    --! covers raids), and oUF under ElvUI 6.09 writes assistant as
-    --! `UnitIsRaidOfficer(unit) and not UnitIsPartyLeader(unit)`. That second half
-    --! keeps the states mutually exclusive: on 3.3.5a the raid leader also answers
-    --! yes to UnitIsRaidOfficer. The group guard stops a solo player from being
-    --! called leader. Both natives are 1/nil; normalised because states.isLeader is
-    --! stored and read back elsewhere.
+    --! WotLK fix: the membership test has to be asked about the UNIT, not about the
+    --! player. Blizzard guards the crown with
+    --!   UnitIsPartyLeader(unit) and (UnitInParty(unit) or UnitInRaid(unit))
+    --! (TargetFrame.lua:117); oUF under ElvUI 6.09 and VuhDo do the same. A player
+    --! level guard lets every button holding a non-member answer yes - pet buttons
+    --! above all, and the codex is explicit that a pet is NOT part of the party
+    --! (UnitInParty). Party pets live in unitButtons.party, so they were asked the
+    --! question and lit extra crowns. Order matters for cost: UnitIsPartyLeader is
+    --! nil on all but one unit and short-circuits, so this is cheaper than before,
+    --! where IsInGroup ran first for every button.
+    --! Assistant keeps `not UnitIsPartyLeader` from oUF: on 3.3.5a the raid leader
+    --! also answers yes to UnitIsRaidOfficer. Natives are 1/nil; normalised because
+    --! states.isLeader is stored and read back elsewhere.
     local UnitIsPartyLeader = UnitIsPartyLeader
     local UnitIsRaidOfficer = UnitIsRaidOfficer
+    local UnitInParty = UnitInParty
+    local UnitInRaid = UnitInRaid
 
     function Cell.UnitIsGroupLeader(unit)
-        return (Cell.IsInGroup() and UnitIsPartyLeader(unit)) and true or false
+        if not UnitIsPartyLeader(unit) then return false end
+        if not (UnitInParty(unit) or UnitInRaid(unit)) then return false end
+        --! UnitInParty("player") is 1 even when solo (codex), so the group question
+        --! still has to be asked once the unit level guard has passed.
+        return Cell.IsInGroup()
     end
 
     function Cell.UnitIsGroupAssistant(unit)
-        return (UnitIsRaidOfficer(unit) and not UnitIsPartyLeader(unit)) and true or false
+        if not UnitIsRaidOfficer(unit) then return false end
+        if not UnitInRaid(unit) then return false end
+        return not UnitIsPartyLeader(unit)
     end
 
     local everyoneAssistant, assistantTicker

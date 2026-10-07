@@ -127,7 +127,7 @@ L["Check if your group members need some raid buffs"] = "Проверяет, е�
 L["Class Color"] = "Цвет класса"
 L["Class Color (dark)"] = "Цвет класса (тёмный)"
 L["Class Filter"] = "Класс: фильтр"
-L["Classes that provide none of these keep the whole list"] = "Класс, который ни одного из этих бафов не даёт, видит список целиком"
+L["Classes that provide none of these show nothing - turn this off for the group overview"] = "Класс, который ни одного из этих бафов не даёт, не видит ничего - выключите, чтобы следить за всей группой"
 L["Clear"] = "Отчистить"
 L["clear"] = "отчистить"
 L["clear unit"] = "отчистить юнита"
@@ -159,6 +159,8 @@ L["Create new debuff (id)"] = "Создать новый дебафф (id)"
 L["Create new debuff (id or name)"] = "Создать новый дебафф (id или название)"
 L["Searching..."] = "Поиск..."
 L["No spell found."] = "Заклинание не найдено."
+L["Input spell id or name"] = "Ввести ID или название заклинания"
+L["Invalid spell id or name."] = "Неподходящее ID или название заклинания"
 L["Create new indicator"] = "Создать новый индикатор"
 L["Create new layout"] = "Создать новый макет"
 L["Create several buttons for quick casting and buff monitoring"] = "Создаёт несколько кнопок для быстрого каста и слежки за баффами"
@@ -612,9 +614,11 @@ L["showTypeBorder"] = "Показывать рамку по типу дебаф�
 --! WotLK fix: tooltip for the same toggle - the checkbox label alone does not say
 --! what "refresh" means here, and the tester asked for an explanation on hover.
 --! No ":" in these strings - see the SHOW_JUMP_TOOLTIP comment in Indicators.lua.
+--! Last line names the real path: the global switch is a dropdown inside the
+--! Aura Icon Options popup, not a checkbox in the Appearance tab itself.
 L["The icon hops when the aura is refreshed - its stack grows or its duration starts over"] = "Иконка подпрыгивает, когда аура обновляется - вырос стак или заново пошла длительность"
 L["Nothing else changes, the countdown and the stack count keep working"] = "Больше ничего не меняется, отсчёт и число стаков работают как раньше"
-L["Appearance tab holds the same switch for every aura icon at once"] = "Такой же выключатель сразу для всех иконок аур - во «Внешнем виде»"
+L["To turn it off for every aura icon at once, open the Appearance tab, press Aura Icon Options and set Play Icon Animation When to Never"] = "Чтобы выключить сразу для всех иконок аур - откройте «Внешний вид», нажмите «Настройки Иконки Ауры» и выставьте «Показывать анимацию иконки когда» на «Никогда»"
 L["The icon stays either way"] = "Иконка остаётся в любом случае"
 --! custom: подписи той же галки про цветное кольцо, см. TYPE_BORDER_TOOLTIP в Indicators.lua.
 L["A colored ring around the icon - its color is the dispel type (Magic, Curse, Disease, Poison) and black when the aura has no type"] = "Цветное кольцо вокруг иконки - его цвет соответствует типу дебаффа (магия, проклятие, болезнь, яд), чёрное если типа нет"
