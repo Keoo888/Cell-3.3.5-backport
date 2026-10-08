@@ -81,12 +81,14 @@ mice, with per-class and per-spec binding profiles.
 
 Track boss abilities and dangerous debuffs in dungeons and raids with
 prioritized, per-instance debuff lists and glow effects. Ships with data for
-Classic, TBC, and WotLK instances, fully editable in-game.
+Classic, TBC, and WotLK instances, fully editable in-game — add a debuff by
+spell ID or by name, and the backport finds every matching ID for you.
 
 #### Utilities
 
-Useful raid tools: ready check, countdown, spell/dispel requests, death report,
-marks bar, and hiding of default Blizzard party/raid frames.
+Useful raid tools: ready check, countdown, spell/dispel requests, buff tracker,
+death report, raid roster window, marks bar, and hiding of default Blizzard
+party/raid frames.
 
 #### Spotlight Frame
 
@@ -111,6 +113,8 @@ Use `/cell` for more information.
 | `/cell debug dump` | Open a copyable diagnostic report — paste it into a bug report (backport addition) |
 | `/cell debug h` | List all diagnostic subcommands (backport addition) |
 | `/cell debug shims` | Show which compatibility globals other addons own on your client (backport addition) |
+| `/cell roledebug` | Log how the role of every unit is detected — use it when a tank or a healer shows up with the wrong role (backport addition) |
+| `/celldebugframes` | Print the name of the frame under your cursor — use it when something cannot be clicked (backport addition) |
 
 <a name="installation"></a>
 ### Installation
@@ -127,6 +131,7 @@ Use `/cell` for more information.
 
 - Built and tested on **Warmane** (WoW 3.3.5a, Interface `30300`).
 - Developed exclusively for **Warmane**. I am not responsible for functionality on other servers.
+- Coexists with other API backport addons (a standalone `!!!ClassicAPI` and the like): Cell never overwrites globals it does not own. Run `/cell debug shims` to see which addon owns what on your client.
 
 <a name="credits"></a>
 ### Credits
@@ -196,13 +201,15 @@ CompactRaid, Grid2, Aptechka и VuhDo: рамки соло/группы/рейд
 
 Отслеживайте способности боссов и опасные дебаффы в подземельях и рейдах с
 приоритетными списками по каждой локации и эффектами свечения. В комплекте
-данные для Classic, TBC и WotLK, полностью редактируемые прямо в игре.
+данные для Classic, TBC и WotLK, полностью редактируемые прямо в игре — дебафф
+добавляется по ID заклинания или по названию, бэкпорт сам найдёт все
+подходящие ID.
 
 #### Утилиты (Utilities)
 
 Полезные рейдовые инструменты: проверка готовности, отсчёт, запросы
-заклинаний/диспела, отчёт о смерти, панель меток и скрытие стандартных рамок
-Blizzard.
+заклинаний/диспела, трекер баффов, отчёт о смерти, окно состава рейда, панель
+меток и скрытие стандартных рамок Blizzard.
 
 #### Рамка Spotlight
 
@@ -227,6 +234,8 @@ Blizzard.
 | `/cell debug dump` | Открыть окно с диагностикой, которую можно скопировать и вставить в баг-репорт (добавлено в бэкпорте) |
 | `/cell debug h` | Список всех диагностических подкоманд (добавлено в бэкпорте) |
 | `/cell debug shims` | Показать, какие глобалы совместимости заняты другими аддонами (добавлено в бэкпорте) |
+| `/cell roledebug` | Писать в чат, как определяется роль каждого юнита — если у танка или лекаря оказалась не та роль (добавлено в бэкпорте) |
+| `/celldebugframes` | Показывать имя рамки под курсором — если что-то не нажимается (добавлено в бэкпорте) |
 
 <a name="установка"></a>
 ### Установка
@@ -243,6 +252,7 @@ Blizzard.
 
 - Собрано и протестировано на **Warmane** (WoW 3.3.5a, Interface `30300`).
 - Разрабатывалось исключительно для **Warmane**. За работоспособность на других серверах ответственности не несу.
+- Сосуществует с другими аддонами-бэкпортами API (отдельный `!!!ClassicAPI` и подобные): Cell не перезаписывает чужие глобалы. Команда `/cell debug shims` покажет, какой аддон чем владеет на вашем клиенте.
 
 <a name="благодарности"></a>
 ### Благодарности
