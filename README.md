@@ -28,6 +28,7 @@
 <p align="center">
   <a href="#features">Features</a> ·
   <a href="#installation">Installation</a> ·
+  <a href="#license">License</a> ·
   <a href="#credits">Credits</a>
 </p>
 
@@ -112,6 +113,14 @@ keep the most important units always in sight.
 - Developed exclusively for **Warmane**. I am not responsible for functionality on other servers.
 - Coexists with other API backport addons (a standalone `!!!ClassicAPI` and the like): Cell never overwrites globals it does not own. Run `/cell debug shims` to see which addon owns what on your client.
 
+<a name="license"></a>
+### License
+
+Cell is distributed under the original Cell license: **All Rights Reserved**;
+modifications are permitted for private use only, and the addon name and folder
+may not be changed. See [LICENSE.txt](LICENSE.txt). Public redistribution of a
+modified build requires the author's explicit permission.
+
 <a name="credits"></a>
 ### Credits
 
@@ -126,6 +135,7 @@ keep the most important units always in sight.
 <p align="center">
   <a href="#возможности">Возможности</a> ·
   <a href="#установка">Установка</a> ·
+  <a href="#лицензия">Лицензия</a> ·
   <a href="#благодарности">Благодарности</a>
 </p>
 
@@ -211,6 +221,14 @@ CompactRaid, Grid2, Aptechka и VuhDo: рамки соло/группы/рейд
 - Собрано и протестировано на **Warmane** (WoW 3.3.5a, Interface `30300`).
 - Разрабатывалось исключительно для **Warmane**. За работоспособность на других серверах ответственности не несу.
 - Сосуществует с другими аддонами-бэкпортами API (отдельный `!!!ClassicAPI` и подобные): Cell не перезаписывает чужие глобалы. Команда `/cell debug shims` покажет, какой аддон чем владеет на вашем клиенте.
+
+<a name="лицензия"></a>
+### Лицензия
+
+Cell распространяется по оригинальной лицензии Cell: **All Rights Reserved**;
+изменения разрешены только для личного использования, имя аддона и папки
+менять нельзя. Подробности — в [LICENSE.txt](LICENSE.txt). Публичное
+распространение изменённой сборки требует явного разрешения автора.
 
 <a name="благодарности"></a>
 ### Благодарности
